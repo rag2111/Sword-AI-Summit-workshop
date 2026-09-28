@@ -1,0 +1,52 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Chat (poe chat)",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "care_agent.cli",
+      "cwd": "${workspaceFolder}",
+      "envFile": "${workspaceFolder}/.env",
+      "console": "integratedTerminal",
+      "justMyCode": true
+    },
+    {
+      "name": "Lab 2 — MCP task",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "care_agent.lab2",
+      "cwd": "${workspaceFolder}",
+      "envFile": "${workspaceFolder}/.env",
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "Lab 3 — A2A delegation",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "care_agent.lab3",
+      "cwd": "${workspaceFolder}",
+      "envFile": "${workspaceFolder}/.env",
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "Evals (4 cases)",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "evals.run_evals",
+      "args": ["--ids", "G01,G03,G09,G10"],
+      "cwd": "${workspaceFolder}",
+      "envFile": "${workspaceFolder}/.env",
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "Tests (offline)",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "pytest",
+      "args": ["tests"],
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal"
+    }
+  ]
+}

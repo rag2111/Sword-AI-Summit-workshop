@@ -1,0 +1,20 @@
+# Preview features — workshop (Deliverable 2)
+
+Every preview / pre-release item used by `workshop/` is labelled in code comments and in the lab guide, and
+has a fallback that keeps the lab completable.
+
+| Feature | Where used | Status | Fallback |
+|---|---|---|---|
+| `agent-framework-a2a` (A2AAgent client) | Lab 3 — `src/care_agent/a2a_delegate.py`, `poe lab3`, `poe redteam` (policy fetch) | Pre-release package `1.0.0b260918` (exact pin) | `poe a2a-card` still works (plain httpx); red team uses the bundled policy copy; `poe catchup 3`; server-side: A2A fallback adapter `care-knowledge-a2a` behind the same APIM route |
+| Foundry Agent Service incoming A2A (`…/endpoint/protocols/a2a`, Agent Card `agentCard/v1.0`) | Lab 3 — remote `care-knowledge-agent` behind `/a2a/care-knowledge` | Public preview | Infra switches the APIM A2A backend to the Container Apps adapter `care-knowledge-a2a`; participant code unchanged |
+| `agent-framework-devui` | Lab 1 optional — `poe devui` (`uv sync --extra devui`) | Pre-release sample app `1.0.0b260918` | `uv run poe chat` (rich CLI) |
+| `azure-monitor-opentelemetry-exporter` | Lab 4 — `src/care_agent/telemetry.py` | Beta `1.0.0b57` (the Azure Monitor exporter has always shipped as beta) | Local span file `.care_agent/spans.jsonl` + `/trace` and `poe traces` always work; console exporter via `TELEMETRY_CONSOLE=true` |
+| Custom `headers_policy` (azure-core `HeadersPolicy`) passed into the Azure Monitor exporter to add `Ocp-Apim-Subscription-Key` | Lab 4 — `build_azure_monitor_exporters()` | Relies on the exporter forwarding kwargs to its azure-core pipeline configuration (verified in exporter source, not a documented public option) | Infra toggle `telemetry_require_subscription_key=false`: `/telemetry` accepts key-less payloads filtered by the workshop iKey, IP rate-limited, size-capped |
+| Built-in safety evaluators (`ContentSafetyEvaluator`) through APIM `/foundry` with `ApimKeyCredential` | Lab 5 — `evals/run_evals.py` metric `builtin_safety` | Preview path (RAI service reached via the Foundry project proxy) | LLM-judge harm rating via `/openai` (`method: llm-fallback`), noted in `summary.json` |
+| Agent evaluators `IntentResolutionEvaluator`, `TaskAdherenceEvaluator`, `ToolCallAccuracyEvaluator` | Lab 5 — `evals/run_evals.py` | Check `azure-ai-evaluation` 1.18.x release notes (introduced as preview; output scales changed between versions — normalised in `evals/scoring.py`) | Deterministic `tool_match` for `tool_call_accuracy`; missing judge metrics are skipped and weights re-normalised; `--no-judge` mode |
+| Foundry cloud evaluation (`project.get_openai_client().evals` with `azure_ai_evaluator` `builtin.*` criteria) | Lab 5 optional — `poe cloud-eval` (`evals/cloud_eval.py`) | Preview | Automatic fallback to `poe upload-evals` |
+| Foundry evals API with `string_check` graders for uploading local results | Lab 5 — `poe upload-evals` (`evals/upload_to_foundry.py`) | Evals API in Foundry (OpenAI-compatible) — treat as preview | Local `evals/out/<run-id>/summary.json` is the source of truth; optional `--dataset` upload; presenter shows results on screen |
+| AI Red Teaming agent (`azure-ai-evaluation[redteam]`, PyRIT) via `/foundry` | Lab 5 optional — `poe redteam --foundry` | Preview (extra `redteam`) | Policy-driven red-team suite (always runs): rules parsed from the escalation & safety policy, attacks generated via `/openai`, template attacks offline |
+| `azure-ai-projects` `.beta.*` operations (red teams, evaluators) | Only via the AI Red Teaming path above | Preview (`allow_preview` / `.beta`) | Same as above |
+| Foundry hosted agents (`HostedAgentDefinition`) + `agent-framework-foundry-hosting` `ResponsesHostServer` | `deploy/` — presenter-only demo | Preview (`1.0.0b260918`, hosting protocol 2.0.0) | Same image on Azure Container Apps (GA); `azd ai agent init` + `azd deploy` |
+| `CHAT_API=responses` (OpenAI Responses API through APIM `/openai`) | Optional override in `src/care_agent/agent.py` | Depends on the gateway route/api-version | Default `chat_completions` (`/openai/deployments/{d}/chat/completions`, api-version `2024-10-21` GA) |

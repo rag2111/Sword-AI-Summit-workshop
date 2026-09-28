@@ -1,0 +1,28 @@
+<!--
+  GET /telemetry/config : returns the participant configuration (CONTRACT §2), so a participant only
+  needs APIM_BASE_URL, APIM_SUBSCRIPTION_KEY and PARTICIPANT_ID. Template variables: config_json.
+-->
+<policies>
+  <inbound>
+    <base />
+    <return-response>
+      <set-status code="200" reason="OK" />
+      <set-header name="Content-Type" exists-action="override">
+        <value>application/json</value>
+      </set-header>
+      <set-header name="Cache-Control" exists-action="override">
+        <value>no-store</value>
+      </set-header>
+      <set-body>${config_json}</set-body>
+    </return-response>
+  </inbound>
+  <backend>
+    <base />
+  </backend>
+  <outbound>
+    <base />
+  </outbound>
+  <on-error>
+    <base />
+  </on-error>
+</policies>

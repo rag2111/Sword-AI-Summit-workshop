@@ -1,0 +1,190 @@
+{
+  "version": "Notebook/1.0",
+  "items": [
+    {
+      "type": 1,
+      "content": {
+        "json": "## Sword AI Summit workshop - participant usage\nTraining use only; synthetic data. Token metrics come from the APIM `llm-emit-token-metric` policy (namespace `care-workshop`, dimension **User ID** = participant). Requests come from the APIM Application Insights diagnostic (W3C correlation). If token tiles are empty, enable *custom metrics with dimensions* on the Application Insights resource (see infra README)."
+      },
+      "name": "intro"
+    },
+    {
+      "type": 9,
+      "content": {
+        "version": "KqlParameterItem/1.0",
+        "parameters": [
+          {
+            "id": "7c0c1f3e-2b8e-4f55-9c35-3f1a6c9e0a01",
+            "version": "KqlParameterItem/1.0",
+            "name": "TimeRange",
+            "type": 4,
+            "isRequired": true,
+            "value": {
+              "durationMs": 14400000
+            },
+            "typeSettings": {
+              "selectableValues": [
+                {
+                  "durationMs": 3600000
+                },
+                {
+                  "durationMs": 14400000
+                },
+                {
+                  "durationMs": 86400000
+                },
+                {
+                  "durationMs": 604800000
+                }
+              ],
+              "allowCustom": true
+            },
+            "label": "Time range"
+          }
+        ],
+        "style": "pills",
+        "queryType": 0,
+        "resourceType": "microsoft.insights/components"
+      },
+      "name": "parameters"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "customMetrics\n| where timestamp {TimeRange}\n| where name in (\"Total Tokens\", \"Prompt Tokens\", \"Completion Tokens\")\n| extend participant = tostring(customDimensions[\"User ID\"]), model = tostring(customDimensions[\"Model\"])\n| summarize total = sumif(valueSum, name == \"Total Tokens\"), prompt = sumif(valueSum, name == \"Prompt Tokens\"), completion = sumif(valueSum, name == \"Completion Tokens\") by participant, model\n| order by total desc",
+        "size": 0,
+        "title": "Tokens per participant",
+        "timeContext": {
+          "durationMs": 0
+        },
+        "timeContextFromParameter": "TimeRange",
+        "queryType": 0,
+        "resourceType": "microsoft.insights/components",
+        "visualization": "table"
+      },
+      "name": "tokens-per-participant"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "customMetrics\n| where timestamp {TimeRange}\n| where name == \"Total Tokens\"\n| extend participant = tostring(customDimensions[\"User ID\"])\n| summarize tokens = sum(valueSum) by participant, bin(timestamp, 5m)",
+        "size": 0,
+        "title": "Token usage over time",
+        "timeContext": {
+          "durationMs": 0
+        },
+        "timeContextFromParameter": "TimeRange",
+        "queryType": 0,
+        "resourceType": "microsoft.insights/components",
+        "visualization": "timechart"
+      },
+      "name": "token-usage-over-time"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "requests\n| where timestamp {TimeRange}\n| extend route = case(url has \"/openai/\", \"openai\", url has \"/care-tools/\", \"mcp\", url has \"/a2a/care-knowledge\", \"a2a\", url has \"/foundry/\", \"foundry\", url has \"/telemetry/\", \"telemetry\", \"other\")\n| summarize calls = count(), errors = countif(success == false), p50_ms = percentile(duration, 50), p95_ms = percentile(duration, 95) by route\n| order by calls desc",
+        "size": 0,
+        "title": "Latency and errors per route",
+        "timeContext": {
+          "durationMs": 0
+        },
+        "timeContextFromParameter": "TimeRange",
+        "queryType": 0,
+        "resourceType": "microsoft.insights/components",
+        "visualization": "table"
+      },
+      "name": "latency-and-errors-per-route"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "requests\n| where timestamp {TimeRange}\n| extend participant = coalesce(tostring(customDimensions[\"Subscription Name\"]), tostring(customDimensions[\"Request-x-participant-id\"]), tostring(customDimensions[\"Backend Request-x-participant-id\"]), \"unknown\")\n| extend route = case(url has \"/openai/\", \"openai\", url has \"/care-tools/\", \"mcp\", url has \"/a2a/care-knowledge\", \"a2a\", url has \"/foundry/\", \"foundry\", url has \"/telemetry/\", \"telemetry\", \"other\")\n| where route != \"telemetry\"\n| summarize calls = count(), errors = countif(success == false), p95_ms = percentile(duration, 95) by participant, route\n| order by participant asc, route asc",
+        "size": 0,
+        "title": "Latency and errors per participant",
+        "timeContext": {
+          "durationMs": 0
+        },
+        "timeContextFromParameter": "TimeRange",
+        "queryType": 0,
+        "resourceType": "microsoft.insights/components",
+        "visualization": "table"
+      },
+      "name": "latency-and-errors-per-participant"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "requests\n| where timestamp {TimeRange}\n| where url has \"/care-tools/\"\n| extend participant = coalesce(tostring(customDimensions[\"Subscription Name\"]), tostring(customDimensions[\"Request-x-participant-id\"]), tostring(customDimensions[\"Backend Request-x-participant-id\"]), \"unknown\")\n| summarize calls = count(), errors = countif(success == false), p95_ms = percentile(duration, 95) by operation_Name, participant\n| order by calls desc",
+        "size": 0,
+        "title": "MCP tool calls by operation",
+        "timeContext": {
+          "durationMs": 0
+        },
+        "timeContextFromParameter": "TimeRange",
+        "queryType": 0,
+        "resourceType": "microsoft.insights/components",
+        "visualization": "table"
+      },
+      "name": "mcp-tool-calls-by-operation"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "dependencies\n| where timestamp {TimeRange}\n| where target has \"care-tools-backend\"\n| summarize calls = count(), failures = countif(success == false), p95_ms = percentile(duration, 95) by name, resultCode\n| order by calls desc",
+        "size": 0,
+        "title": "MCP backend calls (tool executions)",
+        "timeContext": {
+          "durationMs": 0
+        },
+        "timeContextFromParameter": "TimeRange",
+        "queryType": 0,
+        "resourceType": "microsoft.insights/components",
+        "visualization": "table"
+      },
+      "name": "mcp-backend-calls-(tool-executions)"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "requests\n| where timestamp {TimeRange}\n| where url has \"/a2a/care-knowledge\"\n| extend participant = coalesce(tostring(customDimensions[\"Subscription Name\"]), tostring(customDimensions[\"Request-x-participant-id\"]), tostring(customDimensions[\"Backend Request-x-participant-id\"]), \"unknown\")\n| extend kind = iff(url has \"agent-card\", \"agent card\", \"JSON-RPC\")\n| summarize calls = count(), errors = countif(success == false), p95_ms = percentile(duration, 95) by participant, kind\n| order by calls desc",
+        "size": 0,
+        "title": "A2A calls to the base agent",
+        "timeContext": {
+          "durationMs": 0
+        },
+        "timeContextFromParameter": "TimeRange",
+        "queryType": 0,
+        "resourceType": "microsoft.insights/components",
+        "visualization": "table"
+      },
+      "name": "a2a-calls-to-the-base-agent"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "requests\n| where timestamp {TimeRange}\n| where success == false\n| extend participant = coalesce(tostring(customDimensions[\"Subscription Name\"]), tostring(customDimensions[\"Request-x-participant-id\"]), tostring(customDimensions[\"Backend Request-x-participant-id\"]), \"unknown\")\n| extend route = case(url has \"/openai/\", \"openai\", url has \"/care-tools/\", \"mcp\", url has \"/a2a/care-knowledge\", \"a2a\", url has \"/foundry/\", \"foundry\", url has \"/telemetry/\", \"telemetry\", \"other\")\n| project timestamp, participant, route, name, resultCode, duration, operation_Id\n| order by timestamp desc\n| take 50",
+        "size": 0,
+        "title": "Errors (last 50)",
+        "timeContext": {
+          "durationMs": 0
+        },
+        "timeContextFromParameter": "TimeRange",
+        "queryType": 0,
+        "resourceType": "microsoft.insights/components",
+        "visualization": "table"
+      },
+      "name": "errors-(last-50)"
+    }
+  ],
+  "fallbackResourceIds": [],
+  "$schema": "https://github.com/Microsoft/Application-Insights-Workbooks/blob/master/schema/workbook.json"
+}

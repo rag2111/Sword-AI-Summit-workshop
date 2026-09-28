@@ -1,0 +1,189 @@
+"""Base-agent model routing, reasoning compatibility, and failure-cache regression tests."""
+
+import importlib.util
+import json
+from types import SimpleNamespace
+from unittest.mock import Mock
+
+import pytest
+from azure.ai.projects.models import MCPTool
+
+from _helpers import INFRA
+
+spec = importlib.util.spec_from_file_location("create_base_agent", INFRA / "scripts" / "create_base_agent.py")
+agent = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(agent)
+
+
+@pytest.fixture
+def setup(monkeypatch, tmp_path):
+    monkeypatch.setenv("FOUNDRY_PROJECT_ENDPOINT", "https://example.services.ai.azure.com/api/projects/test")
+    monkeypatch.setenv("CHAT_DEPLOYMENT", "gpt-6-luna")
+    monkeypatch.setenv("APIM_CONNECTION_NAME", "apim-gateway")
+    monkeypatch.setenv("MODEL_ROUTE", "auto")
+    monkeypatch.setenv("ENABLE_A2A", "false")
+    knowledge_file = tmp_path / "knowledge.json"
+    knowledge_file.write_text(json.dumps({"mode": "kb"}))
+    monkeypatch.setattr(agent, "INFRA_DIR", tmp_path)
+    monkeypatch.setattr(agent, "KNOWLEDGE_FILE", knowledge_file)
+    monkeypatch.setattr(agent, "OUT_FILE", tmp_path / "base_agent.json")
+    monkeypatch.setattr(agent, "DefaultAzureCredential", Mock())
+    project = Mock()
+    project.agents.create_version.side_effect = [SimpleNamespace(version="2"), SimpleNamespace(version="3")]
+    monkeypatch.setattr(agent, "AIProjectClient", Mock(return_value=project))
+    tool = MCPTool(server_label="care_kb", server_url="https://example.search.windows.net/mcp")
+    monkeypatch.setattr(agent, "grounding_tool", Mock(return_value=tool))
+    monkeypatch.setattr(agent.time, "sleep", Mock())
+    smoke = Mock(return_value=None)
+    monkeypatch.setattr(agent, "smoke_invoke", smoke)
+    return project, tool, smoke
+
+
+def save_previous(tool, **extra):
+    _, digest = agent.definition_for("gpt-6-luna", tool, model_route="direct")
+    previous = {
+        "agent_name": agent.AGENT_NAME, "version": "1", "model": "gpt-6-luna",
+        "model_route": "direct", "definition_sha256": digest, "grounding": "kb",
+        "apim_route_error": "Function tools with reasoning_effort are not supported",
+    } | extra
+    agent.OUT_FILE.write_text(json.dumps(previous))
+
+
+def read_result():
+    return json.loads(agent.OUT_FILE.read_text())
+
+
+def test_reasoning_is_scoped_to_apim_and_changes_digest(setup):
+    _, tool, _ = setup
+    model = "apim-gateway/gpt-6-luna"
+    routed, digest = agent.definition_for(model, tool, model_route="apim")
+    original, original_digest = agent.definition_for(model, tool, model_route="direct")
+    assert routed.as_dict()["reasoning"] == {"effort": "none"}
+    assert "reasoning" not in original.as_dict()
+    assert routed.as_dict()["tools"] == original.as_dict()["tools"]
+    assert routed.instructions == original.instructions == agent.INSTRUCTIONS
+    assert digest != original_digest
+    assert agent.definition_for(model, tool, model_route="apim")[1] == digest
+
+
+@pytest.mark.parametrize("cache", [{}, {"apim_definition_sha256": "old-definition"}])
+def test_auto_retries_legacy_or_changed_failure_cache(setup, cache):
+    project, tool, smoke = setup
+    save_previous(tool, **cache)
+    agent.main()
+    definition = project.agents.create_version.call_args.kwargs["definition"]
+    assert definition.model == "apim-gateway/gpt-6-luna"
+    assert definition.as_dict()["reasoning"] == {"effort": "none"}
+    smoke.assert_called_once_with(project, "2")
+    assert read_result()["model_route"] == "apim"
+    assert "apim_route_error" not in read_result()
+    assert "apim_definition_sha256" not in read_result()
+
+
+def test_auto_keeps_failure_cache_for_same_definition(setup):
+    project, tool, smoke = setup
+    _, digest = agent.definition_for("apim-gateway/gpt-6-luna", tool, model_route="apim")
+    save_previous(tool, apim_definition_sha256=digest)
+    agent.main()
+    project.agents.create_version.assert_not_called()
+    smoke.assert_not_called()
+    assert read_result()["model_route"] == "direct"
+
+
+def test_failed_retry_updates_cache_when_reusing_direct_version(setup):
+    project, tool, smoke = setup
+    save_previous(tool)
+    smoke.return_value = "gateway unavailable"
+    agent.main()
+    assert project.agents.create_version.call_count == 1
+    result = read_result()
+    assert result["version"] == "1"
+    assert result["model_route"] == "direct"
+    assert result["apim_route_error"] == "gateway unavailable"
+    assert result["apim_definition_sha256"] == agent.definition_for(
+        "apim-gateway/gpt-6-luna", tool, model_route="apim"
+    )[1]
+
+
+def test_auto_fallback_creates_direct_definition_without_reasoning(setup):
+    project, _, smoke = setup
+    smoke.side_effect = ["gateway unavailable", None]
+    agent.main()
+    definitions = [call.kwargs["definition"].as_dict() for call in project.agents.create_version.call_args_list]
+    assert definitions[0]["reasoning"] == {"effort": "none"}
+    assert definitions[1]["model"] == "gpt-6-luna"
+    assert "reasoning" not in definitions[1]
+    assert read_result()["model_route"] == "direct"
+    assert read_result()["apim_route_error"] == "gateway unavailable"
+
+
+@pytest.mark.parametrize("route,errors", [
+    ("apim", ["gateway unavailable"]),
+    ("direct", ["direct unavailable"]),
+    ("auto", ["gateway unavailable", "direct unavailable"]),
+])
+def test_failed_smoke_without_successful_fallback_is_fatal(setup, monkeypatch, route, errors):
+    _, _, smoke = setup
+    monkeypatch.setenv("MODEL_ROUTE", route)
+    smoke.side_effect = errors
+    with pytest.raises(SystemExit, match="Test invocation failed"):
+        agent.main()
+    assert not agent.OUT_FILE.exists()
+
+
+def test_strict_apim_retries_matching_cache(setup, monkeypatch):
+    project, tool, smoke = setup
+    _, digest = agent.definition_for("apim-gateway/gpt-6-luna", tool, model_route="apim")
+    save_previous(tool, apim_definition_sha256=digest)
+    monkeypatch.setenv("MODEL_ROUTE", "apim")
+    agent.main()
+    smoke.assert_called_once_with(project, "2")
+    assert read_result()["model_route"] == "apim"
+
+
+def test_direct_route_does_not_disable_reasoning(setup, monkeypatch):
+    project, _, _ = setup
+    monkeypatch.setenv("MODEL_ROUTE", "direct")
+    agent.main()
+    definition = project.agents.create_version.call_args.kwargs["definition"].as_dict()
+    assert definition["model"] == "gpt-6-luna"
+    assert "reasoning" not in definition
+
+
+def test_strict_apim_requires_connection(setup, monkeypatch):
+    project, _, _ = setup
+    monkeypatch.setenv("MODEL_ROUTE", "apim")
+    monkeypatch.delenv("APIM_CONNECTION_NAME")
+    with pytest.raises(SystemExit, match="requires APIM_CONNECTION_NAME"):
+        agent.main()
+    project.agents.create_version.assert_not_called()
+
+
+def test_successful_unchanged_apim_definition_reuses_version(setup):
+    project, _, smoke = setup
+    agent.main()
+    project.agents.create_version.reset_mock()
+    smoke.reset_mock()
+    agent.main()
+    project.agents.create_version.assert_not_called()
+    smoke.assert_not_called()
+    assert read_result()["model_route"] == "apim"
+
+
+def test_smoke_targets_exact_version():
+    project = Mock()
+    client = project.get_openai_client.return_value
+    client.responses.create.return_value.output_text = "A cited answer."
+    assert agent.smoke_invoke(project, "7") is None
+    assert client.responses.create.call_args.kwargs["extra_body"]["agent_reference"] == {
+        "name": agent.AGENT_NAME, "version": "7", "type": "agent_reference",
+    }
+
+
+def test_smoke_reports_empty_response_and_api_errors():
+    project = Mock()
+    client = project.get_openai_client.return_value
+    client.responses.create.return_value.output_text = ""
+    assert agent.smoke_invoke(project, "7") == "empty response"
+    client.responses.create.side_effect = RuntimeError("tools/reasoning rejected")
+    assert agent.smoke_invoke(project, "7") == "tools/reasoning rejected"

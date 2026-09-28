@@ -1,0 +1,23 @@
+<!--
+  care-tools (MCP server, type "mcp") exposing the 7 care-tools-api operations as tools.
+  Do NOT read context.Response.Body here: response buffering breaks MCP streaming.
+-->
+<policies>
+  <inbound>
+    <base />
+    <!-- Per-participant tool-call budget. -->
+    <rate-limit-by-key calls="120" renewal-period="60" counter-key="@(context.Subscription.Id)" />
+    <set-header name="x-backend-secret" exists-action="override">
+      <value>{{${secret_nv}}}</value>
+    </set-header>
+  </inbound>
+  <backend>
+    <base />
+  </backend>
+  <outbound>
+    <base />
+  </outbound>
+  <on-error>
+    <base />
+  </on-error>
+</policies>

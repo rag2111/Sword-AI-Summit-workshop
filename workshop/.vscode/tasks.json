@@ -1,0 +1,196 @@
+{
+  "version": "2.0.0",
+  "inputs": [
+    {
+      "id": "lab",
+      "type": "pickString",
+      "description": "Catch up to the end of lab",
+      "options": [
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6"
+      ]
+    }
+  ],
+  "tasks": [
+    {
+      "label": "poe: Lab 0: smoke test",
+      "type": "shell",
+      "command": "uv run poe smoke",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "poe: Chat with the agent",
+      "type": "shell",
+      "command": "uv run poe chat",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "poe: DevUI (preview)",
+      "type": "shell",
+      "command": "uv run poe devui",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "poe: List MCP tools",
+      "type": "shell",
+      "command": "uv run poe mcp-tools",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "poe: Lab 2: MCP task",
+      "type": "shell",
+      "command": "uv run poe lab2",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "poe: Show Agent Card",
+      "type": "shell",
+      "command": "uv run poe a2a-card",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "poe: Lab 3: A2A delegation",
+      "type": "shell",
+      "command": "uv run poe lab3",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "poe: Find my traces",
+      "type": "shell",
+      "command": "uv run poe traces",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "poe: Lab 5: run evals",
+      "type": "shell",
+      "command": "uv run poe evals",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "poe: Lab 5: red team",
+      "type": "shell",
+      "command": "uv run poe redteam",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "poe: Upload evals to Foundry",
+      "type": "shell",
+      "command": "uv run poe upload-evals",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "poe: Cloud eval (preview)",
+      "type": "shell",
+      "command": "uv run poe cloud-eval",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "poe: Lab 6: improvement loop",
+      "type": "shell",
+      "command": "uv run poe loop",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "poe: Promote candidate",
+      "type": "shell",
+      "command": "uv run poe promote",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "poe: Roll back version",
+      "type": "shell",
+      "command": "uv run poe rollback",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "poe: Serve docs",
+      "type": "shell",
+      "command": "uv run poe docs",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": [],
+      "isBackground": true
+    },
+    {
+      "label": "poe: Offline tests",
+      "type": "shell",
+      "command": "uv run poe test",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": [],
+      "group": {
+        "kind": "test",
+        "isDefault": true
+      }
+    },
+    {
+      "label": "poe: Catch up to lab N",
+      "type": "shell",
+      "command": "uv run poe catchup ${input:lab}",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "uv sync",
+      "type": "shell",
+      "command": "uv sync",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    }
+  ]
+}

@@ -1,0 +1,73 @@
+site_name: "From Prototype to Proof"
+site_description: "Building a Production Agent and Actually Knowing It Works — participant lab guide (1h45m)"
+docs_dir: docs
+site_dir: site
+strict: true
+
+theme:
+  name: material
+  features:
+    - content.code.copy
+    - content.code.annotate
+    - content.tabs.link
+    - navigation.sections
+    - navigation.footer
+    - navigation.top
+    - navigation.tracking
+    - search.highlight
+    - toc.follow
+  palette:
+    - scheme: default
+      primary: indigo
+      accent: teal
+      toggle:
+        icon: material/weather-night
+        name: Dark mode
+    - scheme: slate
+      primary: indigo
+      accent: teal
+      toggle:
+        icon: material/weather-sunny
+        name: Light mode
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.details
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.tasklist:
+      custom_checkbox: true
+
+extra_css:
+  - stylesheets/extra.css
+extra_javascript:
+  - javascripts/timer.js
+
+nav:
+  - Overview: index.md
+  - Setup: setup.md
+  - Labs:
+      - "Lab 0 — Setup & smoke test": lab0.md
+      - "Lab 1 — Local agent": lab1.md
+      - "Lab 2 — Tools via MCP": lab2.md
+      - "Lab 3 — Multi-agent via A2A": lab3.md
+      - "Lab 4 — Observability": lab4.md
+      - "Lab 5 — Evaluations": lab5.md
+      - "Lab 6 — Close the loop": lab6.md
+  - Wrap-up: wrap-up.md
+  - Troubleshooting: troubleshooting.md
+  - Reference: reference.md

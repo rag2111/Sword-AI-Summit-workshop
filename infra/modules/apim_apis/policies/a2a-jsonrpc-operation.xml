@@ -1,0 +1,19 @@
+<!--
+  FALLBACK (a2a_apim_api_kind = "http") operation POST / (A2A JSON-RPC).
+  Template variables: jsonrpc_path.
+-->
+<policies>
+  <inbound>
+    <base />
+    <rewrite-uri template="${jsonrpc_path}" copy-unmatched-params="true" />
+  </inbound>
+  <backend>
+    <base />
+  </backend>
+  <outbound>
+    <base />
+  </outbound>
+  <on-error>
+    <base />
+  </on-error>
+</policies>

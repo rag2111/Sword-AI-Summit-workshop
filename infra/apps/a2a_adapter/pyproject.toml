@@ -1,0 +1,18 @@
+[project]
+name = "care-knowledge-a2a"
+version = "1.0.0"
+description = "FALLBACK A2A adapter in front of the Foundry prompt agent care-knowledge-agent (training use only)."
+requires-python = ">=3.12,<3.13"
+# All versions pinned (verified on PyPI, September 2026).
+# PREVIEW: agent-framework-hosting / agent-framework-hosting-a2a are pre-release (1.0.0a260730).
+# agent-framework-foundry supports azure-ai-projects >=2.2.0,<2.7.0, hence 2.6.1 (see CONTRACT §10).
+dependencies = [
+    "agent-framework-core==1.19.0",
+    "agent-framework-foundry==1.13.1",
+    "agent-framework-hosting==1.0.0a260730",
+    "agent-framework-hosting-a2a==1.0.0a260730",
+    "a2a-sdk[http-server]==1.1.5",
+    "azure-ai-projects==2.6.1",
+    "azure-identity==1.25.3",
+    "uvicorn==0.54.0",
+]

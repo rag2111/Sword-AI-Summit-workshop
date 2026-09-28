@@ -1,0 +1,41 @@
+# Copy to terraform.tfvars (git-ignored) and adjust. Only publisher_email is required.
+
+publisher_email = "roberto.arocha@microsoft.com"
+publisher_name  = "Sword AI Summit Workshop"
+
+# subscription_id = "00000000-0000-0000-0000-000000000000"   # default: Azure CLI subscription
+location          = "swedencentral"
+prefix            = "sword"
+participant_count = 50
+
+# StandardV2 (recommended) | Developer (cheapest, classic, slow deploy) | BasicV2 | Standard | Premium | PremiumV2
+apim_sku = "StandardV2"
+
+# Per-participant token budget on /openai (tokens per minute).
+token_limit_tpm = 20000
+
+# capacity = K TPM per deployment; must fit your regional quota (az cognitiveservices usage list -l <region>).
+model_deployments = [
+  { name = "gpt-6-luna", model = "gpt-6-luna", version = "2026-09-22", sku = "DataZoneStandard", capacity = 200, role = "chat" },
+  { name = "gpt-6-sol", model = "gpt-6-sol", version = "2026-09-22", sku = "DataZoneStandard", capacity = 100, role = "judge" },
+  { name = "text-embedding-3-large", model = "text-embedding-3-large", version = "1", sku = "DataZoneStandard", capacity = 150, role = "embedding" },
+]
+
+# Fallback switches (see README "Preview features and fallbacks").
+a2a_mode                           = "native_foundry" # or "adapter"
+a2a_apim_api_kind                  = "a2a"            # or "http"
+base_agent_model_route             = "auto"           # or "apim" / "direct"
+knowledge_mode                     = "auto"           # or "kb" / "index"
+telemetry_require_subscription_key = true             # false = anonymous, iKey-filtered fallback
+enable_content_safety              = false
+
+search_sku                      = "basic"
+search_knowledge_retrieval_plan = "standard"
+
+tags = {
+  workload        = "sword-ai-summit-workshop"
+  environment     = "training"
+  data            = "synthetic-only"
+  owner       = "roberto.arocha@microsoft.com"
+  SecurityControl = "Ignore"
+}

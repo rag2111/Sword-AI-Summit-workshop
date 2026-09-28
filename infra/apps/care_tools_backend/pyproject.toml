@@ -1,0 +1,17 @@
+[project]
+name = "care-tools-backend"
+version = "1.0.0"
+description = "Mock clinical tools (synthetic data) for the Care Coordination workshop. Not a medical device."
+requires-python = ">=3.12,<3.13"
+# All versions pinned (verified on PyPI, September 2026).
+dependencies = [
+    "fastapi==0.141.1",
+    "uvicorn==0.54.0",
+    "pydantic==2.13.5",
+]
+
+[dependency-groups]
+dev = [
+    "pytest==9.1.1",
+    "httpx==0.28.1",
+]

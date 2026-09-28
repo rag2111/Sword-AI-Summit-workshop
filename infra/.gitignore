@@ -1,0 +1,26 @@
+# Generated secrets and participant files (keys!) - never commit.
+out/
+*.env
+participants.csv
+
+# Terraform state and local config.
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+crash.log
+crash.*.log
+terraform.tfvars
+*.auto.tfvars
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+.terraformrc
+terraform.rc
+
+# Python.
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/

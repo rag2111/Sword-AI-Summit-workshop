@@ -1,0 +1,20 @@
+<!--
+  Global (all APIs) policy. Runs before every API-level policy.
+  - x-participant-id: set from the APIM subscription so backends and logs know who called
+    (override = callers cannot spoof it). CONTRACT §2.
+  - W3C traceparent/tracestate are NOT touched here: they pass through untouched and the
+    Application Insights diagnostic (httpCorrelationProtocol = W3C) makes APIM's span a child span.
+  - Never read context.Response.Body at this scope: it would break MCP streaming.
+-->
+<policies>
+  <inbound>
+    <set-header name="x-participant-id" exists-action="override">
+      <value>@(context.Subscription != null ? context.Subscription.Name : "anonymous")</value>
+    </set-header>
+  </inbound>
+  <backend>
+    <forward-request />
+  </backend>
+  <outbound />
+  <on-error />
+</policies>

@@ -1,0 +1,158 @@
+# From Prototype to Proof: Building a Production Agent and Actually Knowing It Works
+# Participant workshop project (Deliverable 2).
+#
+# Training use only. This workshop uses synthetic, fictional data. The Care Coordination Agent
+# is not a medical device and does not provide clinical advice, diagnosis or treatment decisions.
+#
+# Pinning policy
+# - Workshop-facing libraries are pinned exactly (==).
+# - Foundational libraries shared with the SDKs (httpx, pydantic, rich, ...) use compatible-release
+#   pins (~=) so the resolver can satisfy the SDKs' own constraints; `uv lock` then freezes exact
+#   versions into uv.lock. Presenter: run `uv lock` once before the event and commit uv.lock.
+# - We do NOT install agent-framework-foundry here. It constrains azure-ai-projects to <2.7.0.
+#   If you add it, change the azure-ai-projects pin to 2.6.1 (see docs/reference.md).
+
+[project]
+name = "care-coordination-workshop"
+version = "1.0.0"
+description = "Care Coordination Agent workshop: Agent Framework + APIM (MCP, A2A) + observability + evaluations (synthetic data only)."
+readme = "README.md"
+requires-python = ">=3.12,<3.13"
+license = { text = "MIT" }
+dependencies = [
+    # Microsoft Agent Framework (GA core + OpenAI-compatible clients)
+    "agent-framework-core==1.19.0",
+    "agent-framework-openai==1.14.4",
+    # A2A client (A2AAgent). Pre-release package; the exact pin opts in to this pre-release only.
+    "agent-framework-a2a==1.0.0b260918",
+    # Foundry project data-plane SDK (evals, agents read, red teams) -- called through APIM /foundry
+    "azure-ai-projects==2.7.0",
+    # Local evaluators (IntentResolution, TaskAdherence, ToolCallAccuracy, Groundedness, Relevance, safety)
+    "azure-ai-evaluation==1.18.6",
+    # Azure Monitor exporters (sent through APIM /telemetry with a key-injecting pipeline policy)
+    "azure-monitor-opentelemetry-exporter==1.0.0b57",
+    "opentelemetry-sdk~=1.44.0",
+    "azure-core~=1.35",
+    "httpx~=0.28.1",
+    "python-dotenv~=1.1",
+    "pyyaml~=6.0",
+    "rich~=14.0",
+    "pydantic~=2.11",
+]
+
+[project.optional-dependencies]
+# Agent Framework DevUI (pre-release): `uv sync --extra devui`, then `uv run poe devui`
+devui = ["agent-framework-devui==1.0.0b260918"]
+# AI Red Teaming agent (PyRIT-based, preview): `uv sync --extra redteam`
+redteam = ["azure-ai-evaluation[redteam]==1.18.6"]
+# Azure Monitor distro (only needed if you prefer configure_azure_monitor(); workshop uses bare exporters)
+distro = ["azure-monitor-opentelemetry==1.8.10"]
+
+[dependency-groups]
+dev = [
+    "pytest==9.1.1",
+    "poethepoet==0.48.0",
+]
+docs = [
+    "mkdocs-material==9.7.7",
+]
+
+[tool.uv]
+# `uv sync` installs the dev and docs groups by default so `uv run poe docs` works out of the box.
+default-groups = ["dev", "docs"]
+
+[build-system]
+requires = ["hatchling==1.27.0"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/care_agent"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src", "."]
+addopts = "-q"
+
+[tool.ruff]
+line-length = 110
+target-version = "py312"
+
+# ---------------------------------------------------------------------------------------------
+# Command contract (CONTRACT.md section 11). Run from workshop/:  uv run poe <task>
+# ---------------------------------------------------------------------------------------------
+[tool.poe.tasks.smoke]
+help = "Lab 0: connectivity check against /openai, /care-tools/mcp, /a2a/care-knowledge, /telemetry, /foundry"
+cmd = "python -m care_agent.smoke"
+
+[tool.poe.tasks.chat]
+help = "Interactive CLI chat with the Care Coordination Agent"
+cmd = "python -m care_agent.cli"
+
+[tool.poe.tasks.devui]
+help = "Launch Agent Framework DevUI (install first: uv sync --extra devui)"
+cmd = "python -m care_agent.devui"
+
+[tool.poe.tasks.mcp-tools]
+help = "List MCP tools from the managed APIM MCP endpoint"
+cmd = "python -m care_agent.tools_mcp"
+
+[tool.poe.tasks.lab2]
+help = "Run the scripted task: Plan discharge for patient P-1042 and book a cardiology follow-up within 7 days."
+cmd = "python -m care_agent.lab2"
+
+[tool.poe.tasks.a2a-card]
+help = "Fetch and pretty-print the base agent's Agent Card through APIM"
+cmd = "python -m care_agent.a2a_delegate"
+
+[tool.poe.tasks.lab3]
+help = "Ask a prior-auth policy question that is delegated over A2A; prints citations"
+cmd = "python -m care_agent.lab3"
+
+[tool.poe.tasks.traces]
+help = "Print the KQL / portal steps to find your traces (filtered by PARTICIPANT_ID)"
+cmd = "python -m care_agent.telemetry"
+
+[tool.poe.tasks.evals]
+help = "Run local evaluations with the weighted rubric -> evals/out/<run-id>/"
+cmd = "python -m evals.run_evals"
+
+[tool.poe.tasks.redteam]
+help = "Generate adversarial prompts from the escalation & safety policy and evaluate them"
+cmd = "python -m evals.redteam_from_policy"
+
+[tool.poe.tasks.upload-evals]
+help = "Upload the latest local eval run to the Foundry project via APIM /foundry"
+cmd = "python -m evals.upload_to_foundry"
+
+[tool.poe.tasks.cloud-eval]
+help = "Start a cloud evaluation in Foundry via APIM /foundry (preview; fallback = upload)"
+cmd = "python -m evals.cloud_eval"
+
+[tool.poe.tasks.loop]
+help = "Lab 6: pull failures -> cluster & rank -> propose change -> re-run evals -> promote if better"
+cmd = "python -m loop.run_loop"
+
+[tool.poe.tasks.promote]
+help = "Promote a candidate agent version with lineage into agent_versions/registry.json"
+cmd = "python -m loop.promote"
+
+[tool.poe.tasks.rollback]
+help = "Roll back to the previous agent version"
+cmd = "python -m loop.rollback"
+
+[tool.poe.tasks.catchup]
+help = "Copy solutions/labN/ into src/care_agent/ (a backup of your code is kept)"
+cmd = "python scripts/catchup.py ${lab}"
+args = [{ name = "lab", positional = true, required = true, help = "Lab number (1-6)" }]
+
+[tool.poe.tasks.docs]
+help = "Optionally serve the static guide at http://127.0.0.1:8000 (or open guide/index.html directly)"
+cmd = "python scripts/serve_guide.py"
+
+[tool.poe.tasks.docs-build]
+help = "Rebuild the self-contained static guide from docs/"
+cmd = "python scripts/build_guide.py"
+
+[tool.poe.tasks.test]
+help = "Run offline unit tests (no Azure needed)"
+cmd = "pytest tests"

@@ -1,0 +1,733 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Care Tools API (synthetic)",
+    "version": "1.0.0",
+    "description": "Mock clinical tools for the Lakeside Regional Health Network (fictional) Care Coordination workshop. All data is synthetic. Training use only. This workshop uses synthetic, fictional data. The Care Coordination Agent is not a medical device and does not provide clinical advice, diagnosis or treatment decisions."
+  },
+  "paths": {
+    "/patients/search": {
+      "get": {
+        "operationId": "search_patient",
+        "summary": "Search synthetic patients by name or ID",
+        "description": "Find synthetic inpatients by a name fragment (for example 'Ellis') or a patient ID (for example 'P-1042'). Returns patient_id, display_name, age, primary_condition, ward and discharge_status. Use the returned patient_id with the other tools. All patients are fictional.",
+        "parameters": [
+          {
+            "name": "query",
+            "in": "query",
+            "required": true,
+            "description": "Name fragment or patient ID, e.g. 'Ellis' or 'P-1042'.",
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Matching patients (possibly empty).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PatientSummary"
+                  }
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid input.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/patients/{patient_id}/care-plan": {
+      "get": {
+        "operationId": "get_care_plan",
+        "summary": "Get a patient's discharge care plan",
+        "description": "Return the synthetic discharge care plan for one patient: condition, care pathway document ID, discharge readiness, expected discharge date, pending tasks, medication list, payer and required follow-ups (specialty, days after discharge, policy reference). Use this before booking follow-ups, creating referrals or checking prior authorization.",
+        "parameters": [
+          {
+            "name": "patient_id",
+            "in": "path",
+            "required": true,
+            "description": "Patient ID, e.g. 'P-1042'.",
+            "schema": {
+              "type": "string",
+              "maxLength": 20
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Care plan.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CarePlan"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unknown patient.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/slots": {
+      "get": {
+        "operationId": "list_available_slots",
+        "summary": "List available appointment slots for a specialty",
+        "description": "List open appointment slots for one specialty, starting after today and no later than within_days from today, sorted by start time. Each slot has slot_id, specialty, clinician, location and start (ISO 8601, UTC). Use slot_id with book_follow_up. Slots you have already booked are not listed.",
+        "parameters": [
+          {
+            "name": "specialty",
+            "in": "query",
+            "required": true,
+            "description": "One of: cardiology, pulmonology, endocrinology, primary-care, physiotherapy.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "cardiology",
+                "pulmonology",
+                "endocrinology",
+                "primary-care",
+                "physiotherapy"
+              ]
+            }
+          },
+          {
+            "name": "within_days",
+            "in": "query",
+            "required": false,
+            "description": "Only slots starting within this many days from today (default 14, max 60).",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 60,
+              "default": 14
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Available slots.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Slot"
+                  }
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid input.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/appointments": {
+      "post": {
+        "operationId": "book_follow_up",
+        "summary": "Book a follow-up appointment in a slot",
+        "description": "Book a follow-up appointment for a patient in an available slot. Returns appointment_id and status 'booked'. Returns HTTP 409 if the slot is already taken - then pick another slot from list_available_slots. Only book after the coordinator's request; never book outside the SLA window without approval (SAFE-001).",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BookFollowUpRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Appointment booked.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Appointment"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unknown patient or slot.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Slot already booked.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid input.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/referrals": {
+      "post": {
+        "operationId": "create_referral",
+        "summary": "Create a specialist referral",
+        "description": "Create a referral record for a patient to a specialty with urgency 'routine' or 'urgent'. Returns referral_id, status 'created' and sla_days (urgent = 2 days; routine depends on specialty per REF-001). Copy the reason from the care plan; never invent clinical reasons.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateReferralRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Referral created.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Referral"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unknown patient.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid input.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/medications/interactions": {
+      "post": {
+        "operationId": "check_medication_interactions",
+        "summary": "Check a medication list against the synthetic interaction rules",
+        "description": "Check a list of medication names against the network's SYNTHETIC training rule set. Returns interactions (pair, severity high/moderate/low, note, rule_id) and a disclaimer. Report flags verbatim; never recommend medication or dose changes. 'No flags' does not mean safe.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MedicationInteractionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Interaction check result.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InteractionResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid input.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/prior-auth": {
+      "get": {
+        "operationId": "check_prior_auth_requirement",
+        "summary": "Check whether a payer requires prior authorization for a procedure",
+        "description": "Look up whether a fictional payer requires prior authorization for a procedure code (e.g. CARD-ECHO, CARD-MRI, PULM-REHAB, ENDO-CGM). Payer may be the full name (Northwind Health Plan, Contoso Care Insurance, Fabrikam Mutual Assurance) or short code (NHP, CCI, FMA). Returns prior_auth_required, policy_ref and notes. Never state that a procedure is covered or approved.",
+        "parameters": [
+          {
+            "name": "payer",
+            "in": "query",
+            "required": true,
+            "description": "Payer name or short code.",
+            "schema": {
+              "type": "string",
+              "maxLength": 60
+            }
+          },
+          {
+            "name": "procedure_code",
+            "in": "query",
+            "required": true,
+            "description": "Procedure code, e.g. 'CARD-ECHO'.",
+            "schema": {
+              "type": "string",
+              "maxLength": 30
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Prior-authorization rule.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PriorAuthResult"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unknown payer.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid input.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Error": {
+        "type": "object",
+        "properties": {
+          "detail": {
+            "type": "string"
+          }
+        }
+      },
+      "PatientSummary": {
+        "type": "object",
+        "properties": {
+          "patient_id": {
+            "type": "string"
+          },
+          "display_name": {
+            "type": "string"
+          },
+          "age": {
+            "type": "integer"
+          },
+          "primary_condition": {
+            "type": "string"
+          },
+          "ward": {
+            "type": "string"
+          },
+          "discharge_status": {
+            "type": "string"
+          }
+        }
+      },
+      "Medication": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "dose": {
+            "type": "string"
+          },
+          "frequency": {
+            "type": "string"
+          }
+        }
+      },
+      "FollowUp": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "appointment",
+              "referral"
+            ]
+          },
+          "specialty": {
+            "type": "string"
+          },
+          "within_days_of_discharge": {
+            "type": "integer"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "policy_ref": {
+            "type": "string"
+          },
+          "procedure_code": {
+            "type": "string"
+          }
+        }
+      },
+      "CarePlan": {
+        "type": "object",
+        "properties": {
+          "patient_id": {
+            "type": "string"
+          },
+          "condition": {
+            "type": "string"
+          },
+          "care_pathway": {
+            "type": "string"
+          },
+          "discharge_readiness": {
+            "type": "string"
+          },
+          "expected_discharge_date": {
+            "type": "string",
+            "format": "date"
+          },
+          "pending_tasks": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "medications": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Medication"
+            }
+          },
+          "payer": {
+            "type": "string"
+          },
+          "required_follow_ups": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FollowUp"
+            }
+          },
+          "disclaimer": {
+            "type": "string"
+          }
+        }
+      },
+      "Slot": {
+        "type": "object",
+        "properties": {
+          "slot_id": {
+            "type": "string"
+          },
+          "specialty": {
+            "type": "string"
+          },
+          "clinician": {
+            "type": "string"
+          },
+          "location": {
+            "type": "string"
+          },
+          "start": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "BookFollowUpRequest": {
+        "type": "object",
+        "required": [
+          "patient_id",
+          "slot_id",
+          "reason"
+        ],
+        "properties": {
+          "patient_id": {
+            "type": "string",
+            "description": "Patient ID, e.g. 'P-1042'.",
+            "maxLength": 20
+          },
+          "slot_id": {
+            "type": "string",
+            "description": "Slot ID from list_available_slots, e.g. 'SLOT-CARD-001'.",
+            "maxLength": 30
+          },
+          "reason": {
+            "type": "string",
+            "description": "Reason for the follow-up, copied from the care plan.",
+            "minLength": 3,
+            "maxLength": 300
+          }
+        }
+      },
+      "Appointment": {
+        "type": "object",
+        "properties": {
+          "appointment_id": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "booked"
+            ]
+          },
+          "patient_id": {
+            "type": "string"
+          },
+          "slot_id": {
+            "type": "string"
+          },
+          "specialty": {
+            "type": "string"
+          },
+          "clinician": {
+            "type": "string"
+          },
+          "location": {
+            "type": "string"
+          },
+          "start": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "reason": {
+            "type": "string"
+          }
+        }
+      },
+      "CreateReferralRequest": {
+        "type": "object",
+        "required": [
+          "patient_id",
+          "specialty",
+          "urgency",
+          "reason"
+        ],
+        "properties": {
+          "patient_id": {
+            "type": "string",
+            "description": "Patient ID, e.g. 'P-2077'.",
+            "maxLength": 20
+          },
+          "specialty": {
+            "type": "string",
+            "enum": [
+              "cardiology",
+              "pulmonology",
+              "endocrinology",
+              "primary-care",
+              "physiotherapy"
+            ],
+            "description": "Target specialty."
+          },
+          "urgency": {
+            "type": "string",
+            "enum": [
+              "routine",
+              "urgent"
+            ],
+            "description": "Never downgrade an urgent request."
+          },
+          "reason": {
+            "type": "string",
+            "description": "Reason copied from the care plan.",
+            "minLength": 3,
+            "maxLength": 300
+          }
+        }
+      },
+      "Referral": {
+        "type": "object",
+        "properties": {
+          "referral_id": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "created"
+            ]
+          },
+          "patient_id": {
+            "type": "string"
+          },
+          "specialty": {
+            "type": "string"
+          },
+          "urgency": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "sla_days": {
+            "type": "integer"
+          },
+          "first_contact_due_by": {
+            "type": "string",
+            "format": "date"
+          },
+          "policy_ref": {
+            "type": "string"
+          }
+        }
+      },
+      "MedicationInteractionRequest": {
+        "type": "object",
+        "required": [
+          "medications"
+        ],
+        "properties": {
+          "medications": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 20,
+            "items": {
+              "type": "string",
+              "maxLength": 60
+            },
+            "description": "Medication names, e.g. ['spironolactone', 'lisinopril']."
+          }
+        }
+      },
+      "Interaction": {
+        "type": "object",
+        "properties": {
+          "pair": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "severity": {
+            "type": "string",
+            "enum": [
+              "high",
+              "moderate",
+              "low"
+            ]
+          },
+          "note": {
+            "type": "string"
+          },
+          "rule_id": {
+            "type": "string"
+          }
+        }
+      },
+      "InteractionResult": {
+        "type": "object",
+        "properties": {
+          "checked": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "interactions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Interaction"
+            }
+          },
+          "disclaimer": {
+            "type": "string"
+          }
+        }
+      },
+      "PriorAuthResult": {
+        "type": "object",
+        "properties": {
+          "payer": {
+            "type": "string"
+          },
+          "procedure_code": {
+            "type": "string"
+          },
+          "procedure": {
+            "type": "string"
+          },
+          "prior_auth_required": {
+            "type": "boolean"
+          },
+          "policy_ref": {
+            "type": "string"
+          },
+          "notes": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

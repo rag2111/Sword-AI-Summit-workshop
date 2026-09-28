@@ -1,0 +1,41 @@
+/* Custom callouts: Concept / Do this / Checkpoint / Troubleshoot */
+:root {
+  --concept-color: #3f51b5;
+  --dothis-color: #00897b;
+  --checkpoint-color: #43a047;
+  --troubleshoot-color: #fb8c00;
+  --md-admonition-icon--concept: url('data:image/svg+xml;charset=utf-8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 2a7 7 0 0 0-4 12.74V17a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1v-2.26A7 7 0 0 0 12 2M9 21a1 1 0 0 0 1 1h4a1 1 0 0 0 1-1v-1H9z"/></svg>');
+  --md-admonition-icon--dothis: url('data:image/svg+xml;charset=utf-8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>');
+  --md-admonition-icon--checkpoint: url('data:image/svg+xml;charset=utf-8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>');
+  --md-admonition-icon--troubleshoot: url('data:image/svg+xml;charset=utf-8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M22.7 19 13.6 9.9c.9-2.3.4-5-1.5-6.9-2-2-5-2.4-7.4-1.3L9 6 6 9 1.6 4.7C.4 7.1.9 10.1 2.9 12.1c1.9 1.9 4.6 2.4 6.9 1.5l9.1 9.1c.4.4 1 .4 1.4 0l2.3-2.3c.5-.4.5-1.1.1-1.4"/></svg>');
+}
+.md-typeset .admonition.concept, .md-typeset details.concept { border-color: var(--concept-color); }
+.md-typeset .concept > .admonition-title, .md-typeset .concept > summary { background-color: rgb(63 81 181 / 10%); }
+.md-typeset .concept > .admonition-title::before, .md-typeset .concept > summary::before {
+  background-color: var(--concept-color); -webkit-mask-image: var(--md-admonition-icon--concept); mask-image: var(--md-admonition-icon--concept);
+}
+.md-typeset .admonition.dothis, .md-typeset details.dothis { border-color: var(--dothis-color); }
+.md-typeset .dothis > .admonition-title, .md-typeset .dothis > summary { background-color: rgb(0 137 123 / 10%); }
+.md-typeset .dothis > .admonition-title::before, .md-typeset .dothis > summary::before {
+  background-color: var(--dothis-color); -webkit-mask-image: var(--md-admonition-icon--dothis); mask-image: var(--md-admonition-icon--dothis);
+}
+.md-typeset .admonition.checkpoint, .md-typeset details.checkpoint { border-color: var(--checkpoint-color); }
+.md-typeset .checkpoint > .admonition-title, .md-typeset .checkpoint > summary { background-color: rgb(67 160 71 / 10%); }
+.md-typeset .checkpoint > .admonition-title::before, .md-typeset .checkpoint > summary::before {
+  background-color: var(--checkpoint-color); -webkit-mask-image: var(--md-admonition-icon--checkpoint); mask-image: var(--md-admonition-icon--checkpoint);
+}
+.md-typeset .admonition.troubleshoot, .md-typeset details.troubleshoot { border-color: var(--troubleshoot-color); }
+.md-typeset .troubleshoot > .admonition-title, .md-typeset .troubleshoot > summary { background-color: rgb(251 140 0 / 10%); }
+.md-typeset .troubleshoot > .admonition-title::before, .md-typeset .troubleshoot > summary::before {
+  background-color: var(--troubleshoot-color); -webkit-mask-image: var(--md-admonition-icon--troubleshoot); mask-image: var(--md-admonition-icon--troubleshoot);
+}
+
+/* Per-lab timer badge (click to start a countdown; see javascripts/timer.js) */
+.lab-timer {
+  display: inline-block; padding: 0.15rem 0.6rem; border-radius: 1rem; font-weight: 600; font-size: 0.8rem;
+  background: var(--md-accent-fg-color--transparent); border: 1px solid var(--md-accent-fg-color); cursor: pointer;
+}
+.lab-timer.running { background: var(--md-accent-fg-color); color: var(--md-accent-bg-color); }
+.lab-timer.overtime { background: #e53935; color: #fff; border-color: #e53935; }
+
+.disclaimer { border-left: 4px solid #fb8c00; padding: 0.4rem 0.8rem; background: rgb(251 140 0 / 8%); }

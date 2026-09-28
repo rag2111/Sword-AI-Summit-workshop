@@ -1,0 +1,30 @@
+{
+  // Zero-install alternative to local setup: GitHub Codespaces or VS Code Dev Containers.
+  // Training use only — synthetic data. You still only need the three values in .env.
+  "name": "Care Coordination Workshop",
+  "image": "mcr.microsoft.com/devcontainers/python:1-3.12-bookworm",
+  "postCreateCommand": "pipx install uv && uv sync && ([ -f .env ] || cp .env.example .env)",
+  "forwardPorts": [8000, 8080],
+  "portsAttributes": {
+    "8000": { "label": "Lab guide (poe docs)", "onAutoForward": "notify" },
+    "8080": { "label": "Agent Framework DevUI", "onAutoForward": "notify" }
+  },
+  "containerEnv": {
+    "UV_LINK_MODE": "copy"
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-python.python",
+        "ms-python.vscode-pylance",
+        "charliermarsh.ruff",
+        "bierner.markdown-mermaid",
+        "tamasfe.even-better-toml",
+        "ms-windows-ai-studio.windows-ai-studio"
+      ],
+      "settings": {
+        "python.defaultInterpreterPath": "${containerWorkspaceFolder}/.venv/bin/python"
+      }
+    }
+  }
+}

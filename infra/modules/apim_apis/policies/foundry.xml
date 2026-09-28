@@ -1,0 +1,55 @@
+<!--
+  /foundry : Foundry project data-plane proxy (evaluations, datasets, red teams, agent reads, OpenAI
+  evals/responses) for participants who only have an APIM key. WORKSHOP PATTERN (CONTRACT §5):
+  the SDK sends a placeholder bearer token; APIM strips it and calls Foundry with its managed identity.
+  Everything not on the allowlist gets 403. Template variables: project (Foundry project name),
+  project_backend (APIM backend entity name).
+-->
+<policies>
+  <inbound>
+    <base />
+    <set-variable name="foundryAllowed" value='@{
+        var path = context.Request.Url.Path.ToLowerInvariant();
+        var marker = "/api/projects/${project}/";
+        var i = path.IndexOf(marker);
+        if (i == -1) { return false; }
+        var rest = path.Substring(i + marker.Length);
+        var method = context.Request.Method.ToUpperInvariant();
+        var rx = new System.Text.RegularExpressions.Regex("^(evaluations|evaluationrules|evaluationtaxonomies|evaluators|evals|datasets|redteams|insights|schedules)(/|$)");
+        if (rx.IsMatch(rest)) { return method != "DELETE"; }
+        if (System.Text.RegularExpressions.Regex.IsMatch(rest, "^openai/(v1/)?(evals|responses|conversations|files)(/|$)")) { return true; }
+        if (method == "GET" &amp;&amp; System.Text.RegularExpressions.Regex.IsMatch(rest, "^(agents|deployments)(/|$)")) { return true; }
+        if (method == "POST" &amp;&amp; System.Text.RegularExpressions.Regex.IsMatch(rest, "^agents/[^/]+/versions$")) {
+            return !rest.StartsWith("agents/care-knowledge-agent/");
+        }
+        return false;
+    }' />
+    <choose>
+      <when condition='@(!(bool)context.Variables["foundryAllowed"])'>
+        <return-response>
+          <set-status code="403" reason="Forbidden" />
+          <set-header name="Content-Type" exists-action="override">
+            <value>application/json</value>
+          </set-header>
+          <set-body>{"error":{"code":"WorkshopAllowlist","message":"This Foundry operation is not enabled for workshop participants (see infra README, /foundry allowlist)."}}</set-body>
+        </return-response>
+      </when>
+    </choose>
+    <set-header name="Authorization" exists-action="delete" />
+    <set-header name="Ocp-Apim-Subscription-Key" exists-action="delete" />
+    <set-header name="api-key" exists-action="delete" />
+    <authentication-managed-identity resource="https://ai.azure.com" />
+    <set-backend-service backend-id="${project_backend}" />
+  </inbound>
+  <backend>
+    <retry condition="@(context.Response.StatusCode == 429 || context.Response.StatusCode == 503)" count="3" interval="2" delta="2" max-interval="20" first-fast-retry="false">
+      <forward-request buffer-request-body="true" timeout="180" />
+    </retry>
+  </backend>
+  <outbound>
+    <base />
+  </outbound>
+  <on-error>
+    <base />
+  </on-error>
+</policies>

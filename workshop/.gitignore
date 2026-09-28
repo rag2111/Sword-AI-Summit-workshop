@@ -1,0 +1,28 @@
+# Secrets: never commit your personal key
+.env
+.env.*
+!.env.example
+*.env
+participants.csv
+
+# Python / uv
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+build/
+dist/
+
+# Workshop run artefacts
+evals/out/*
+!evals/out/.gitkeep
+loop/out/
+.care_agent/
+.catchup_backups/
+site/
+
+# Editors / OS
+.DS_Store
+.idea/

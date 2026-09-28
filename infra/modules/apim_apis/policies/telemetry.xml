@@ -1,0 +1,42 @@
+<!--
+  /telemetry : Application Insights ingestion proxy (POST /telemetry/v2.1/track, /telemetry/v2/track).
+  The Azure Monitor OpenTelemetry exporter uses IngestionEndpoint=<APIM>/telemetry/ and sends the
+  participant key as an extra header. Template variables: anonymous (bool, FALLBACK mode without
+  subscription key), ikey (workshop instrumentation key), max_body_bytes.
+-->
+<policies>
+  <inbound>
+    <base />
+    <set-header name="Ocp-Apim-Subscription-Key" exists-action="delete" />
+    <set-header name="api-key" exists-action="delete" />
+    <set-header name="Authorization" exists-action="delete" />
+    <validate-content unspecified-content-type-action="ignore" max-size="${max_body_bytes}" size-exceeded-action="prevent" errors-variable-name="telemetryBodyErrors" />
+%{ if anonymous ~}
+    <!-- FALLBACK: no subscription key. Limit by client IP and only forward the workshop iKey. -->
+    <rate-limit-by-key calls="300" renewal-period="60" counter-key="@(context.Request.IpAddress)" />
+    <choose>
+      <when condition='@{
+          if (context.Request.Method != "POST") { return false; }
+          if (context.Request.Headers.GetValueOrDefault("Content-Encoding", "").Contains("gzip")) { return false; }
+          var body = context.Request.Body.As&lt;string&gt;(preserveContent: true);
+          return !body.Contains("${ikey}");
+      }'>
+        <return-response>
+          <set-status code="403" reason="Unknown instrumentation key" />
+        </return-response>
+      </when>
+    </choose>
+%{ else ~}
+    <rate-limit-by-key calls="600" renewal-period="60" counter-key="@(context.Subscription.Id)" />
+%{ endif ~}
+  </inbound>
+  <backend>
+    <base />
+  </backend>
+  <outbound>
+    <base />
+  </outbound>
+  <on-error>
+    <base />
+  </on-error>
+</policies>

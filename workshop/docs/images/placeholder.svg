@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="400" viewBox="0 0 960 400" role="img" aria-label="Screenshot placeholder">
+  <rect width="960" height="400" fill="#eef1f8" stroke="#9fa8da" stroke-width="4" stroke-dasharray="16 10"/>
+  <text x="480" y="190" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="36" fill="#3f51b5">Screenshot placeholder</text>
+  <text x="480" y="240" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="20" fill="#5c6bc0">Replace with a capture from the dry run (synthetic data only)</text>
+</svg>

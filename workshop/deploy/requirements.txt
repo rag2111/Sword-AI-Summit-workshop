@@ -1,0 +1,15 @@
+# PRESENTER-ONLY container image dependencies (not used by participants).
+# The hosting adapter pulls in agent-framework-foundry, which requires azure-ai-projects>=2.2.0,<2.7.0,
+# so this image pins azure-ai-projects==2.6.1 instead of the workshop's 2.7.0.
+agent-framework-core==1.19.0
+agent-framework-openai==1.14.4
+agent-framework-a2a==1.0.0b260918
+agent-framework-foundry==1.13.1
+agent-framework-foundry-hosting==1.0.0b260918
+azure-ai-projects==2.6.1
+azure-monitor-opentelemetry-exporter==1.0.0b57
+opentelemetry-sdk~=1.44.0
+httpx~=0.28.1
+python-dotenv~=1.1
+pyyaml~=6.0
+rich~=14.0

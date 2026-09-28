@@ -1,0 +1,23 @@
+# Test harness for the infra deliverable (not a package). From infra/:  uv run pytest
+# Post-deploy scripts carry their own pinned dependencies inline (PEP 723) and run with `uv run <script>`.
+[project]
+name = "care-workshop-infra-tests"
+version = "1.0.0"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "azure-ai-projects==2.7.0",
+    "azure-identity==1.25.3",
+    "azure-storage-blob==12.30.3",
+    "fastapi==0.141.1",
+    "httpx==0.28.1",
+    "pydantic==2.13.5",
+    "pytest==9.1.1",
+    "uvicorn==0.54.0",
+]
+
+[tool.uv]
+package = false
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"

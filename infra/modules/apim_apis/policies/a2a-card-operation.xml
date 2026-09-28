@@ -1,0 +1,22 @@
+<!--
+  FALLBACK (a2a_apim_api_kind = "http") operation GET /.well-known/agent-card.json.
+  Maps the well-known card path to the backend card path and rewrites backend URLs in the card to
+  the public APIM URL, so clients never learn (or need) the backend hostname.
+  Template variables: card_path, replace_from, replace_to.
+-->
+<policies>
+  <inbound>
+    <base />
+    <rewrite-uri template="${card_path}" copy-unmatched-params="false" />
+  </inbound>
+  <backend>
+    <base />
+  </backend>
+  <outbound>
+    <base />
+    <find-and-replace from="${replace_from}" to="${replace_to}" />
+  </outbound>
+  <on-error>
+    <base />
+  </on-error>
+</policies>

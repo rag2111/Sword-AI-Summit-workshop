@@ -1,0 +1,19 @@
+# APIM exceptions — infra (Deliverable 1)
+
+Everything a **participant** calls goes through APIM (`/openai`, `/care-tools/mcp`, `/a2a/care-knowledge`,
+`/foundry`, `/telemetry`). The items below are the traffic paths that do not strictly pass through APIM.
+
+| What cannot strictly go through APIM | Why | Mitigation |
+|---|---|---|
+| Base agent `care-knowledge-agent` → Foundry IQ knowledge base / Azure AI Search (MCP tool, or Search tool in fallback) | Internal service-to-service call made by Foundry Agent Service through a project connection (project managed identity); the platform does not route tool calls to its own knowledge layer via an external gateway | Read-only RBAC (project MI: *Search Index Data Reader*); calls appear in Foundry traces; the knowledge base is not exposed to participants directly |
+| Base agent → model, when `base_agent_model_route` resolves to `direct` | The Foundry AI-gateway connection to APIM (category `ApiManagement`) is preview; if the test call fails the script falls back to the direct deployment (reason recorded in `out/base_agent.json`) | Default `auto` tries APIM first (dedicated subscription `svc-foundry-agent`, metered like a participant); in direct mode usage is still bounded by deployment capacity and visible in Foundry monitoring |
+| Azure AI Search → Foundry models (embeddings during ingestion, LLM query planning at retrieval) | Search calls the model endpoint with its own managed identity; not configurable to a gateway URL with MI auth | Search MI has *Cognitive Services User* on the Foundry account only; deployment capacity limits apply |
+| Foundry cloud evaluations / red-team runs → judge model | Executed inside Foundry with the project managed identity after the participant submits them via APIM `/foundry` | Submission itself goes through APIM (allowlisted, metered per participant); project MI has *Cognitive Services OpenAI User* only |
+| Dataset/file uploads started via `/foundry` (`startPendingUpload` returns a SAS URL) | The SDK uploads the blob **directly** to project storage using the returned SAS URL | Only small evaluation files; the SAS is short-lived and scoped; allowlist only permits dataset operations on the workshop project |
+| Post-deploy admin scripts (`seed_knowledge.py`, `create_base_agent.py`) → Storage, Search, Foundry, ARM | Run by the admin with the Azure CLI identity before the workshop to create data-plane objects | Admin-only RBAC granted to the deployer; idempotent; never used by participants |
+| Terraform / `az acr build` → ARM and ACR | Control-plane provisioning and image builds | Admin-only; no participant credentials involved |
+| APIM → Container Apps (`care-tools-backend`, fallback `care-knowledge-a2a`) over public ingress | APIM is not VNet-integrated in this workshop setup, so the apps need external ingress | Every request must carry `x-backend-secret` (APIM named value, random 40 chars); apps return 403 otherwise. Production: VNet-integrated APIM + internal ingress |
+| A2A adapter (fallback) → Foundry agent | Service-to-service call from behind APIM with the adapter's user-assigned identity | Identity has *Foundry User* on the project only; participants still reach it only via `/a2a/care-knowledge` |
+| Telemetry fallback mode (`telemetry_require_subscription_key = false`) | Some exporters cannot add the subscription-key header | `/telemetry` still goes through APIM but anonymously: only envelopes containing the workshop iKey are forwarded (non-gzip), rate limit 300/min per client IP, body ≤ 3 MB; switch back after the workshop |
+| Application Insights Live Metrics (QuickPulse) | Would connect to the regional live endpoint directly | Participant connection string has no `LiveEndpoint`; keep Live Metrics disabled in the exporter |
+| Presenter/admin use of the Foundry portal and Azure portal | Human admin access for demos and troubleshooting | Entra ID + RBAC; not part of the participant path |

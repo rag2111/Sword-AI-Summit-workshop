@@ -1,0 +1,42 @@
+<!--
+  /a2a/care-knowledge : A2A (JSON-RPC) to the base agent care-knowledge-agent.
+  Template variables: adapter (bool) = FALLBACK Container Apps adapter instead of Foundry native A2A;
+  http_kind (bool) = plain HTTP API flavour (explicit operations) instead of the APIM A2A API type;
+  backend_base_url (string, used when http_kind); secret_nv (named value holding the shared secret).
+-->
+<policies>
+  <inbound>
+    <base />
+    <rate-limit-by-key calls="30" renewal-period="60" counter-key="@(context.Subscription.Id)" />
+    <set-header name="Ocp-Apim-Subscription-Key" exists-action="delete" />
+    <set-header name="api-key" exists-action="delete" />
+    <set-header name="Authorization" exists-action="delete" />
+%{ if adapter ~}
+    <!-- Adapter: only APIM knows the shared secret. -->
+    <set-header name="x-backend-secret" exists-action="override">
+      <value>{{${secret_nv}}}</value>
+    </set-header>
+%{ else ~}
+    <!-- Foundry native A2A requires Entra ID even for the agent card: use APIM's managed identity. -->
+    <authentication-managed-identity resource="https://ai.azure.com" />
+    <!-- Select the GA protocol version unless the caller chose one explicitly. -->
+    <set-header name="A2A-Version" exists-action="skip">
+      <value>1.0</value>
+    </set-header>
+%{ endif ~}
+%{ if http_kind ~}
+    <set-backend-service base-url="${backend_base_url}" />
+%{ endif ~}
+  </inbound>
+  <backend>
+    <retry condition="@(context.Response.StatusCode == 429 || context.Response.StatusCode == 503)" count="2" interval="2" first-fast-retry="false">
+      <forward-request buffer-request-body="true" timeout="180" />
+    </retry>
+  </backend>
+  <outbound>
+    <base />
+  </outbound>
+  <on-error>
+    <base />
+  </on-error>
+</policies>

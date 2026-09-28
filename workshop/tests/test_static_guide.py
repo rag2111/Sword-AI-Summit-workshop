@@ -1,0 +1,98 @@
+"""The participant deliverable must be complete, portable and reproducible."""
+
+from html.parser import HTMLParser
+import re
+
+from scripts.build_guide import LABS, OUTPUT, PAGES, ROOT, build, render_page
+from scripts.serve_guide import GUIDE
+
+
+class Document(HTMLParser):
+    def __init__(self, content):
+        super().__init__()
+        self.tags = []
+        self.text = []
+        self.feed(content)
+
+    def handle_starttag(self, tag, attrs):
+        self.tags.append((tag, dict(attrs)))
+
+    def handle_data(self, data):
+        self.text.append(data)
+
+
+def test_static_guide_is_current():
+    assert OUTPUT.exists(), "Run uv run poe docs-build"
+    assert OUTPUT.read_text(encoding="utf-8") == build()
+
+
+def test_every_page_and_lab_is_bundled():
+    content = build()
+    document = Document(content)
+    page_ids = {attrs["id"] for tag, attrs in document.tags if tag == "section"}
+    assert page_ids == {"home", *PAGES}
+    cards = [attrs for tag, attrs in document.tags if attrs.get("class") == "lab-card"]
+    assert len(cards) == len(LABS) == 7
+    assert {card["href"] for card in cards} == {f"#lab{i}" for i in range(7)}
+    assert "Screenshot placeholder" not in content
+    assert "{{" not in content
+
+
+def test_static_guide_has_no_runtime_asset_dependencies():
+    document = Document(build())
+    for tag, attrs in document.tags:
+        assert tag not in {"iframe", "object"}
+        if tag in {"script", "img", "link", "source", "video", "audio"}:
+            assert not attrs.get("src")
+            assert not attrs.get("href")
+    javascript = (ROOT / "scripts" / "guide" / "guide.js").read_text(encoding="utf-8")
+    assert not re.search(r"\b(fetch|XMLHttpRequest|WebSocket)\s*\(", javascript)
+    assert GUIDE == OUTPUT.parent
+
+
+def test_internal_routes_resolve_and_ids_are_unique():
+    document = Document(build())
+    ids = [attrs["id"] for _, attrs in document.tags if "id" in attrs]
+    assert len(ids) == len(set(ids))
+    for tag, attrs in document.tags:
+        if tag != "a":
+            continue
+        href = attrs.get("href", "")
+        if href.startswith("#"):
+            target, _, fragment = href[1:].partition("/")
+            assert target in ids, href
+            if fragment:
+                assert f"{target}--{fragment}" in ids, href
+        else:
+            assert not href.endswith(".md"), f"Unconverted Markdown link: {href}"
+    for _, attrs in document.tags:
+        if "for" in attrs:
+            assert attrs["for"] in ids
+
+
+def test_all_labs_keep_steps_code_and_verification():
+    expected_steps = (5, 6, 5, 5, 4, 8, 5)
+    for number, count in enumerate(expected_steps):
+        page = render_page(f"lab{number}")
+        document = Document(page)
+        assert sum(attrs.get("class") == "admonition dothis" for _, attrs in document.tags) == count
+        assert sum(attrs.get("class") == "admonition checkpoint" for _, attrs in document.tags) == 1
+        for heading in ("Steps", "Expected output", "Troubleshooting", "What you just proved"):
+            assert f">{heading}</h2>" in page
+        assert "uv run poe" in "".join(document.text)
+        assert "```" not in page
+    for name in ("index", "setup", "lab1", "lab2", "lab3", "lab4", "lab5", "lab6"):
+        rendered = render_page(name)
+        assert '<figure class="flow">' in rendered
+        assert "Read the detailed diagram source" in rendered
+
+
+def test_browser_controls_and_accessibility_basics():
+    content = build()
+    assert '<html lang="en">' in content
+    assert 'name="viewport"' in content
+    for control in ("reset-progress", "progress", "print", "announcement", "storage-notice", "route-notice"):
+        assert f'id="{control}"' in content
+    assert "<noscript>" in content
+    assert 'class="skip-link"' in content
+    assert "prefers-reduced-motion" in content

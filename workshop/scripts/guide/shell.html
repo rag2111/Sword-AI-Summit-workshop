@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="A hands-on guide to building, connecting and evaluating a Care Coordination Agent. Seven detailed labs, available offline.">
+  <title>From Prototype to Proof | Workshop</title>
+  <style>{{STYLE}}</style>
+</head>
+<body>
+  <a class="skip-link" href="#content">Skip to content</a>
+  <aside class="sidebar" aria-label="Workshop navigation">
+    <a class="brand" href="#home"><span class="brand-mark" aria-hidden="true">P<span>2</span>P</span><span>PROTOTYPE<br><strong>TO PROOF</strong></span></a>
+    <div class="edition">HANDS-ON WORKSHOP / 2026</div>
+    <nav aria-label="Guide">
+      <a class="home-link" href="#home">Workshop overview <span aria-hidden="true">&nearr;</span></a>
+      <a href="#setup">Before you begin</a>
+      <p class="nav-heading">YOUR LEARNING PATH</p>
+      {{LAB_LINKS}}
+      <p class="nav-heading">KEEP EXPLORING</p>
+      <a href="#wrap-up">Key takeaways</a>
+      <a href="#troubleshooting">Troubleshooting</a>
+      <a href="#reference">Command reference</a>
+      <a href="#index">Workshop context &amp; agenda</a>
+    </nav>
+    <div class="overall-progress interactive">
+      <div><strong>Your progress</strong><span id="progress-label">0 / 7 labs</span></div>
+      <progress id="progress" value="0" max="7" aria-label="Completed labs"></progress>
+      <button id="reset-progress" class="text-button" type="button">Reset progress</button>
+      <small>Saved only in this browser. No account needed.</small>
+    </div>
+    <div class="local-badge"><span aria-hidden="true"></span> LOCAL GUIDE / NO TRACKING</div>
+  </aside>
+  <div class="workspace">
+    <header class="topbar">
+      <span>THE AGENT ENGINEERING LAB</span>
+      <div><span class="offline-pill">Offline-ready guide</span><button class="text-button interactive" id="print" type="button">Print / PDF</button></div>
+    </header>
+    <main id="content" tabindex="-1">
+      <noscript><p class="notice">JavaScript is disabled. All instructions are shown below. Use your browser's Find command to navigate; progress and copy buttons require JavaScript.</p></noscript>
+      <p id="storage-notice" class="notice" role="status" hidden></p>
+      <p id="route-notice" class="notice" role="status" hidden></p>
+      <section class="page home" id="home" aria-label="Workshop overview">
+        <div class="hero">
+          <div class="hero-copy">
+            <div class="eyebrow"><span class="status-dot"></span> BUILD IT. CONNECT IT. PROVE IT.</div>
+            <h1>From prototype<br>to <em>proof.</em></h1>
+            <p>A working agent is just the beginning. Build a Care Coordination Agent, give it tools and expert knowledge, then prove it works with traces, evaluations and a safe improvement loop.</p>
+            <div class="hero-actions"><a class="button primary" href="#lab0" id="resume">Start Lab 0 <span aria-hidden="true">&rarr;</span></a><a class="button secondary" href="#setup">Check prerequisites</a></div>
+            <div class="hero-stats"><div><strong>07</strong><span>guided labs</span></div><div><strong>105<span> min</span></strong><span>including concept talks</span></div><div><strong>01</strong><span>gateway, one key</span></div></div>
+          </div>
+          <div class="hero-visual" aria-label="Build, connect, observe and improve your agent">
+            <div class="visual-label">YOUR AGENT, WITH EVIDENCE</div>
+            <div class="agent-node"><span class="node-icon" aria-hidden="true">&#9671;</span><strong>Care Coordination<br>Agent</strong><small>Microsoft Agent Framework</small></div>
+            <div class="connection-line"></div>
+            <div class="gateway-node">APIM <span>One governed gateway</span></div>
+            <div class="branch-line"></div>
+            <div class="service-nodes"><div><b>MCP</b><span>Tools</span></div><div><b>A2A</b><span>Knowledge</span></div><div><b>OTel</b><span>Traces</span></div></div>
+            <div class="proof-node"><span aria-hidden="true">&#10003;</span> Evaluate &rarr; improve &rarr; verify</div>
+          </div>
+        </div>
+        <div class="training-note"><strong>Synthetic scenario. Real engineering.</strong><span>All patient data is fictional. This agent is not a medical device and does not provide clinical advice, diagnosis or treatment decisions.</span></div>
+        <div class="section-heading"><div><span class="eyebrow">THE LEARNING PATH</span><h2>Seven labs. One complete journey.</h2></div><span>Build at your own pace.</span></div>
+        <p class="path-intro">Work from top to bottom. Each lab includes the exact files to open, commands to run, expected results and a checkpoint. Check off steps as you go.</p>
+        <div class="lab-grid">{{CARDS}}</div>
+        <div class="help-strip"><div><strong>Lost a few minutes? Keep moving.</strong><p>Each coding lab has a solution checkpoint. Your existing code is backed up before it is replaced.</p></div><a href="#troubleshooting">Find a fix <span aria-hidden="true">&rarr;</span></a></div>
+        <p class="offline-explainer">The guide works offline and never asks for credentials. Running the labs requires uv, the workshop code, your participant configuration and access to the APIM gateway.</p>
+      </section>
+      {{PAGES}}
+      <nav id="page-navigation" class="page-navigation interactive" aria-label="Previous and next page" hidden><a id="previous-page" class="button secondary"></a><a id="next-page" class="button primary"></a></nav>
+    </main>
+    <footer>FROM PROTOTYPE TO PROOF <span>Training use only &middot; Lakeside Regional Health Network (fictional)</span></footer>
+  </div>
+  <div id="announcement" class="sr-only" role="status" aria-live="polite"></div>
+  <script>{{SCRIPT}}</script>
+</body>
+</html>
