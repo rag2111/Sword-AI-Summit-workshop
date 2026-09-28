@@ -137,6 +137,11 @@ cmd = "python -m loop.run_loop"
 help = "Promote a candidate agent version with lineage into agent_versions/registry.json"
 cmd = "python -m loop.promote"
 
+[tool.poe.tasks.promote-force]
+help = "Demo only: force promotion of an explicit version without requiring validation"
+cmd = "python -m loop.promote --force --version ${version}"
+args = [{ name = "version", options = ["--version"], required = true, help = "Existing version to activate, e.g. v3" }]
+
 [tool.poe.tasks.rollback]
 help = "Roll back to the previous agent version"
 cmd = "python -m loop.rollback"

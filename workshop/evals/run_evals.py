@@ -21,6 +21,8 @@ import argparse
 import asyncio
 import json
 import sys
+import threading
+import time
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -171,14 +173,42 @@ async def collect_responses(
 # ---------------------------------------------------------------------------------------------
 # 2. Judges
 # ---------------------------------------------------------------------------------------------
+class RequestPacer:
+    """Keep evaluator call start times a minimum distance apart across threads."""
+
+    def __init__(self, delay_seconds: float = 0.0) -> None:
+        if delay_seconds < 0:
+            raise ValueError("judge delay must be zero or greater")
+        self.delay_seconds = delay_seconds
+        self._last_request_at: float | None = None
+        self._lock = threading.Lock()
+
+    def wait(self) -> None:
+        if self.delay_seconds == 0:
+            return
+        with self._lock:
+            now = time.monotonic()
+            if self._last_request_at is not None:
+                time.sleep(max(0.0, self.delay_seconds - (now - self._last_request_at)))
+            self._last_request_at = time.monotonic()
+
+
 class Judges:
     """Builds the azure-ai-evaluation evaluators once; every evaluator call goes through APIM."""
 
     SAFETY_KEYS = ("violence", "self_harm", "sexual", "hate_unfairness")
 
-    def __init__(self, settings: Settings, *, use_judge: bool, instructions: str | None = None) -> None:
+    def __init__(
+        self,
+        settings: Settings,
+        *,
+        use_judge: bool,
+        instructions: str | None = None,
+        delay_seconds: float = 0.0,
+    ) -> None:
         self.settings = settings
         self.instructions = instructions
+        self.pacer = RequestPacer(delay_seconds)
         self.notes: list[str] = []
         self.llm: dict[str, Any] = {}
         self.content_safety: Any = None
@@ -187,8 +217,9 @@ class Judges:
             self.notes.append("--no-judge: LLM-judge metrics skipped; deterministic metrics only.")
             return
         try:
-            from azure.ai.evaluation import (
-                AzureOpenAIModelConfiguration,
+            from azure.ai.evaluation import AzureOpenAIModelConfiguration
+
+            from evals.sdk_judges import (
                 GroundednessEvaluator,
                 IntentResolutionEvaluator,
                 RelevanceEvaluator,
@@ -232,6 +263,7 @@ class Judges:
         if evaluator is None:
             return None
         try:
+            self.pacer.wait()
             output = evaluator(**kwargs)
         except Exception as exc:  # noqa: BLE001
             raw[name] = {"error": f"{type(exc).__name__}: {str(exc)[:200]}"}
@@ -257,6 +289,7 @@ class Judges:
         from evals.judge import chat_json
 
         try:
+            self.pacer.wait()
             verdict = chat_json(
                 self.settings,
                 system=(
@@ -333,6 +366,8 @@ def score_row(row: dict[str, Any], judges: Judges, definitions: list[dict[str, A
             raw["groundedness"] = {"reason": "no policy context was retrieved (ask_policy_expert not called)"}
         metrics["relevance"] = judges.call("relevance", raw, query=query, response=response)
 
+    if judges.no_diagnosis.use_llm:
+        judges.pacer.wait()
     diagnosis = judges.no_diagnosis(query=query, response=response)
     metrics["no_clinical_diagnosis"] = diagnosis["no_clinical_diagnosis"] if response else None
     raw["no_clinical_diagnosis"] = diagnosis
@@ -357,13 +392,20 @@ async def score_rows(
     rows: list[dict[str, Any]], judges: Judges, definitions: list[dict[str, Any]], rubric: dict[str, Any],
     *, concurrency: int = 1,
 ) -> list[dict[str, Any]]:
+    from rich.progress import Progress
+
     semaphore = asyncio.Semaphore(max(1, concurrency))
 
-    async def one(row: dict[str, Any]) -> dict[str, Any]:
-        async with semaphore:
-            return {**row, **await asyncio.to_thread(score_row, row, judges, definitions, rubric)}
+    with Progress() as progress:
+        task = progress.add_task(f"judging {len(rows)} cases", total=len(rows))
 
-    return list(await asyncio.gather(*(one(r) for r in rows)))
+        async def one(row: dict[str, Any]) -> dict[str, Any]:
+            async with semaphore:
+                result = {**row, **await asyncio.to_thread(score_row, row, judges, definitions, rubric)}
+                progress.advance(task)
+                return result
+
+        return list(await asyncio.gather(*(one(r) for r in rows)))
 
 
 # ---------------------------------------------------------------------------------------------
@@ -458,6 +500,7 @@ async def run_evaluation(
     instructions: str | None,
     use_judge: bool = True,
     concurrency: int = 1,
+    judge_delay_seconds: float = 0.0,
     out_root: Path = OUT_DIR,
     label: str | None = None,
     dataset: str = "golden.jsonl",
@@ -471,7 +514,15 @@ async def run_evaluation(
     rows, definitions, ihash = await collect_responses(
         settings, cases, version=version, instructions=instructions, run_id=run_id, concurrency=concurrency
     )
-    judges = Judges(settings, use_judge=use_judge, instructions=instructions)
+    errors = [row for row in rows if row.get("error")]
+    if errors:
+        print(f"Agent collection: {len(errors)}/{len(rows)} cases failed; first error: {errors[0]['error']}")
+    judges = Judges(
+        settings,
+        use_judge=use_judge,
+        instructions=instructions,
+        delay_seconds=judge_delay_seconds,
+    )
     scored = await score_rows(rows, judges, definitions, rubric, concurrency=concurrency)
     summary = summarize(scored, rubric, settings, run_id=run_id, version=version, instructions_hash=ihash,
                         dataset=dataset, notes=judges.notes)
@@ -516,6 +567,8 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
     parser.add_argument("--no-judge", action="store_true", help="skip LLM judges (offline scoring only)")
     parser.add_argument("--concurrency", type=int, default=1,
                         help="concurrent cases in each phase (agent and judging); default 1 to reduce throttling")
+    parser.add_argument("--judge-delay", type=float, default=0.0, metavar="SECONDS",
+                        help="minimum delay between judge requests; useful for low-TPM deployments")
     parser.add_argument("--fail-on-gate", action="store_true", help="exit 1 if the gate fails (CI)")
     parser.add_argument("--rescore", metavar="RUN_ID", nargs="?", const="latest",
                         help="re-apply the current rubric to a stored run (no model calls)")
@@ -543,7 +596,8 @@ def main(argv: list[str] | None = None) -> int:
         version, instructions = resolve_version(args.candidate)
         out_dir, summary, scored = asyncio.run(
             run_evaluation(settings, cases=cases, rubric=rubric, version=version, instructions=instructions,
-                           use_judge=not args.no_judge, concurrency=args.concurrency, dataset=args.golden.name)
+                           use_judge=not args.no_judge, concurrency=args.concurrency,
+                           judge_delay_seconds=args.judge_delay, dataset=args.golden.name)
         )
     except ConfigError as exc:
         print(f"✗ {exc}")

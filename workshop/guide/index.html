@@ -1152,6 +1152,12 @@ category, severity) and <code>evals/rubric.yaml</code>. Find G01 (the Lab 2 task
 Confirm you get one result for each selected case. Use this small run to diagnose configuration
 errors before spending the budget on the full golden set. A <strong>FAIL</strong> verdict is a finding, not a
 command malfunction.</p>
+<p>For a smaller smoke test using the first three golden cases, with paced judge calls:
+<div class="highlight"><pre><span></span><code>uv<span class="w"> </span>run<span class="w"> </span>poe<span class="w"> </span>evals<span class="w"> </span>--limit<span class="w"> </span><span class="m">3</span><span class="w"> </span>--judge-delay<span class="w"> </span><span class="m">5</span>
+</code></pre></div>
+Use <code>--no-judge</code> to skip LLM judges (the agent still calls the gateway). A small subset is not a full
+safety evaluation. In <a href="#lab6">Lab 6</a>, use <code>uv run poe loop --limit 3</code> for the corresponding limited
+improvement loop; it disables automatic promotion.</p>
 </div>
 <div class="admonition dothis">
 <p class="admonition-title">3. Full run</p>
@@ -1280,15 +1286,20 @@ checkpoint label.)</p>
 <div class="admonition troubleshoot">
 <p class="admonition-title">400: <code>max_tokens</code> is not supported</p>
 <p>The workshop's <code>gpt-6-sol</code> judge (and <code>gpt-6-luna</code> override) requires <code>max_completion_tokens</code>.
-The runner enables the SDK's <code>is_reasoning_model</code> option for these deployments, which also removes
-unsupported sampling parameters. The shared custom-judge helper uses <code>max_completion_tokens</code> and
-<code>reasoning_effort: none</code>, so short JSON verdicts do not spend their output budget on hidden reasoning.
+The runner's compatibility adapter uses <code>max_completion_tokens</code>, removes unsupported sampling
+parameters, and sets <code>reasoning_effort: none</code>. Unlike the SDK's default reasoning mode (60,000
+completion tokens), it preserves each evaluator's native budget: 800 for intent/grounding/relevance,
+3,000 for task adherence and 5,000 for tool accuracy. The custom-judge helper also disables hidden reasoning.
 After updating the workshop code, verify with <code>uv run poe evals --ids G10</code> (diagnosis refusal).
 <code>--rescore</code> only recomputes rubric scores from saved metrics; it does not retry failed judges.
 Re-running G01/G03 can create additional synthetic bookings or referrals.</p>
 </div>
 <div class="admonition troubleshoot">
 <p class="admonition-title">429 during evals</p>
+<p>Update the code before retrying: the pinned SDK's default reasoning mode requests up to 60,000
+completion tokens. The compatibility adapter avoids that inflated allowance without changing the
+evaluation prompts or scoring. <code>--judge-delay</code> only spaces evaluator calls; it cannot guarantee
+that requests fit either the APIM participant budget or the backend deployment's TPM limit.</p>
 <p>Judges and the agent share your token budget. <code>--concurrency 1</code> (the default) now applies to both
 agent collection and judging; increasing it can cause competing retries. Stop other runs using
 the same participant key while evaluating. Use <code>--ids</code> for a subset, or <code>--no-judge</code> for deterministic
@@ -1365,9 +1376,28 @@ TODO block with:</p>
 <p><div class="highlight"><pre><span></span><code>uv<span class="w"> </span>run<span class="w"> </span>poe<span class="w"> </span>loop<span class="w"> </span>--quick
 </code></pre></div>
 <code>--quick</code> validates on your failing cases plus all critical cases (baseline re-run on the same set).
+The loop spaces judge requests by 5 seconds to reduce pressure on the participant token-per-minute
+budget. Override this only when instructed, for example <code>--judge-delay 10</code> for a lower-quota deployment.
 To reduce judge costs, <code>uv run poe loop --offline</code> uses deterministic metrics and a template proposal.
 Agent validation still makes gateway/model calls. To inspect the candidate before changing the active
 version, use <code>uv run poe loop --quick --no-promote</code> instead.</p>
+<p>For a short rehearsal with at most three golden cases per evaluation:
+<div class="highlight"><pre><span></span><code>uv<span class="w"> </span>run<span class="w"> </span>poe<span class="w"> </span>loop<span class="w"> </span>--limit<span class="w"> </span><span class="m">3</span>
+</code></pre></div>
+<code>--limit N</code> must be a positive integer. It selects the first N cases in <code>evals/golden.jsonl</code>
+(or all cases if fewer are available), filters failure analysis to those IDs, and compares
+the baseline and candidate on the same IDs. It also limits the initial baseline if no saved run
+covers those cases. If combined with <code>--quick</code>, <code>--limit</code> takes precedence.
+Three cases means three per version, not three model calls: each case has several judges.
+If all selected cases pass, the loop stops without proposing a change.
+Limited runs never auto-promote; validate the candidate on the full set before promotion.
+This is a smoke test, not full safety coverage. For a faster template-based rehearsal:
+<div class="highlight"><pre><span></span><code>uv<span class="w"> </span>run<span class="w"> </span>poe<span class="w"> </span>loop<span class="w"> </span>--limit<span class="w"> </span><span class="m">3</span><span class="w"> </span>--offline
+</code></pre></div>
+This skips LLM judges and uses a template proposal; the agent still calls the gateway.
+To space judge requests more conservatively without disabling them:
+<div class="highlight"><pre><span></span><code>uv<span class="w"> </span>run<span class="w"> </span>poe<span class="w"> </span>loop<span class="w"> </span>--limit<span class="w"> </span><span class="m">3</span><span class="w"> </span>--judge-delay<span class="w"> </span><span class="m">10</span>
+</code></pre></div></p>
 </div>
 <div class="admonition dothis">
 <p class="admonition-title">4. Inspect the lineage</p>
@@ -1384,8 +1414,26 @@ parent, validation status, <code>eval_run_id</code>, <code>trace_ids</code> and 
 </code></pre></div>
 Reopen the registry and verify <code>active</code> points to the prior version. Start a new chat to verify its footer.
 You can promote a validated candidate again with <code>uv run poe promote --version v2</code> (substitute your version).
-If the candidate was rejected, do not force a promotion or roll back an unrelated version: verify that
-<code>active</code> is unchanged and read the rejection reason. That is a successful safety-gate exercise.</p>
+If the candidate was rejected, normally leave it inactive and read the rejection reason.
+That is a successful safety-gate exercise. Do not roll back an unrelated version.</p>
+</div>
+<div class="admonition warning">
+<p class="admonition-title">Optional demo override: force promotion of an explicit version</p>
+<p>Only for the synthetic workshop demo, you can activate an existing candidate even if it is
+unvalidated or rejected. Replace <code>v3</code> with the version you inspected in the registry:
+<div class="highlight"><pre><span></span><code>uv<span class="w"> </span>run<span class="w"> </span>poe<span class="w"> </span>promote-force<span class="w"> </span>--version<span class="w"> </span>v3
+</code></pre></div>
+This is an alias for the existing command:
+<div class="highlight"><pre><span></span><code>uv<span class="w"> </span>run<span class="w"> </span>poe<span class="w"> </span>promote<span class="w"> </span>--version<span class="w"> </span>v3<span class="w"> </span>--force
+</code></pre></div>
+<code>promote-force</code> requires <code>--version</code>; it never chooses a version implicitly.
+It bypasses the validation requirement, changes the active pointer and preserves any existing
+evaluation evidence; it does not run evaluations or turn a failed result into a pass.
+A limited or offline run is not proof of full safety coverage. Prefer full validation followed
+by <code>uv run poe promote --version v3</code> outside this explicit demo override.</p>
+<p>Restart the chat to load the new active instructions. To undo the promotion:
+<div class="highlight"><pre><span></span><code>uv<span class="w"> </span>run<span class="w"> </span>poe<span class="w"> </span>rollback
+</code></pre></div></p>
 </div>
 <h2 id="lab6--expected-output">Expected output</h2>
 <div class="highlight"><pre><span></span><code>─────────────────────────────── 1 · Pull failures ───────────────────────────────
@@ -1421,6 +1469,22 @@ restore it after the exercise. Do not weaken a safety gate.</p>
 <div class="admonition troubleshoot">
 <p class="admonition-title">Candidate rejected: <code>does not beat baseline</code></p>
 <p>LLM judges are noisy on small sets; the gate requires +0.01. Run without <code>--quick</code>, or accept the rejection.</p>
+</div>
+<div class="admonition troubleshoot">
+<p class="admonition-title">Repeated <code>429</code> / <code>Retrying in ... seconds</code> warnings</p>
+<p>Update the code and restart the command: the pinned SDK's reasoning mode defaults to 60,000
+completion tokens. The workshop adapter preserves the evaluators' native 800/3,000/5,000-token
+budgets and disables hidden reasoning for the supported workshop models.
+Stop other commands that use the same participant key. Pacing alone cannot guarantee that
+requests fit the token budget; the SDK warnings are retries, not final failures.
+The <code>judging N cases</code> progress bar tracks scoring after agent collection has completed.</p>
+<p>To resume validation of an existing candidate without proposing another version, use its actual ID:
+<code>uv run python -m loop.validate --version v3 --judge-delay 5</code>.
+This validates the full golden set and does not promote; inspect the comparison before running
+<code>uv run poe promote --version v3</code>. To reproduce a quick subset instead, pass its case IDs with <code>--ids</code>.
+If 429s persist, the presenter should check both the APIM participant budget and the backend
+deployment's TPM usage. Do not increase quotas automatically or treat missing judge metrics as proof
+that the candidate improved.</p>
 </div>
 <div class="admonition troubleshoot">
 <p class="admonition-title">Chat still shows version v1 after promotion</p>
@@ -1777,7 +1841,7 @@ all of them explicitly.</p>
 </tr>
 <tr>
 <td><code>uv run poe evals</code></td>
-<td>run local evaluations with weighted rubric → <code>evals/out/&lt;run-id&gt;/</code> (<code>--ids</code>, <code>--limit</code>, <code>--no-judge</code>, <code>--rescore</code>, <code>--candidate vN</code>)</td>
+<td>run local evaluations with weighted rubric → <code>evals/out/&lt;run-id&gt;/</code> (<code>--ids</code>, <code>--limit</code>, <code>--judge-delay</code>, <code>--no-judge</code>, <code>--rescore</code>, <code>--candidate vN</code>)</td>
 </tr>
 <tr>
 <td><code>uv run poe redteam</code></td>
@@ -1793,11 +1857,23 @@ all of them explicitly.</p>
 </tr>
 <tr>
 <td><code>uv run poe loop</code></td>
-<td>Lab 6 pipeline: pull low-scoring traces/results → cluster &amp; rank failure modes → propose change → re-run evals → promote if better (<code>--quick</code>, <code>--offline</code>, <code>--no-promote</code>)</td>
+<td>Lab 6 pipeline: pull low-scoring traces/results → cluster &amp; rank failure modes → propose change → re-run evals → promote if better (<code>--quick</code>, <code>--limit N</code>, <code>--judge-delay</code>, <code>--offline</code>, <code>--no-promote</code>)</td>
+</tr>
+<tr>
+<td><code>uv run poe loop --limit 3</code></td>
+<td>use the first three golden cases throughout the loop, per version; overrides <code>--quick</code> and never auto-promotes</td>
+</tr>
+<tr>
+<td><code>uv run poe loop --limit 3 --offline</code></td>
+<td>same three-case rehearsal with deterministic scoring and a template proposal; agent calls still use the gateway</td>
 </tr>
 <tr>
 <td><code>uv run poe promote</code></td>
 <td>promote candidate agent version with lineage (version, eval run ID, trace IDs) into <code>agent_versions/registry.json</code></td>
+</tr>
+<tr>
+<td><code>uv run poe promote-force --version v3</code></td>
+<td><strong>demo only:</strong> activate an explicit existing version without requiring validation; alias for <code>uv run poe promote --version v3 --force</code>; does not run evaluations</td>
 </tr>
 <tr>
 <td><code>uv run poe rollback</code></td>

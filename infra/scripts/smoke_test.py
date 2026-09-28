@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 import time
 import uuid
@@ -25,6 +26,25 @@ from pathlib import Path
 import httpx
 
 TIMEOUT = httpx.Timeout(120.0, connect=15.0)
+
+
+def validate_a2a_answer(result: dict) -> tuple[bool, str]:
+    """Check the final answer, never the task's echoed user-message history."""
+    task = result.get("task", result)
+    if "status" in task:
+        state = task["status"].get("state")
+        if state not in ("completed", "TASK_STATE_COMPLETED"):
+            return False, f"A2A task did not complete: {state}"
+        parts = [part for artifact in task.get("artifacts", []) for part in artifact.get("parts", [])]
+        parts += task["status"].get("message", {}).get("parts", [])
+    else:
+        parts = result.get("message", result).get("parts", [])
+    answer = "\n".join(part["text"] for part in parts if isinstance(part.get("text"), str))
+    if not answer.strip():
+        return False, "A2A returned no answer text"
+    if not re.search(r"\bPA-001\s*§\s*PA-\d", answer):
+        return False, "A2A answer missing prior-authorization policy citation (PA-001 + section)"
+    return True, "A2A answer includes a prior-authorization policy citation"
 
 
 def load_env(path: Path) -> dict[str, str]:
@@ -147,7 +167,8 @@ class Smoke:
             r = self.http.post(self.cfg["A2A_URL"], json=payload, headers={"A2A-Version": version})
             body = r.json() if r.content and "json" in r.headers.get("content-type", "") else {}
             if r.status_code == 200 and "result" in body:
-                return True, f"A2A {version} {payload['method']} OK"
+                ok, answer_detail = validate_a2a_answer(body["result"])
+                return ok, f"A2A {version} {payload['method']}: {answer_detail}"
             detail += f"[{version}: HTTP {r.status_code} {json.dumps(body.get('error', ''))[:80]}] "
         return False, detail
 

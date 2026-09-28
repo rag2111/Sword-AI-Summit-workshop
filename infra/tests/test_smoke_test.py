@@ -1,4 +1,4 @@
-"""MCP smoke checks must inspect backend results, not just the outer HTTP 200."""
+"""MCP and A2A smoke checks inspect backend results, not just the outer HTTP 200."""
 
 import importlib.util
 import json
@@ -45,3 +45,35 @@ def test_mcp_checks_slot_result(slots, ok):
     assert smoke._mcp.call_args.args[0]["params"] == {
         "name": "list_available_slots", "arguments": {"specialty": "cardiology", "within_days": 7},
     }
+
+
+@pytest.mark.parametrize("state", ["failed", "TASK_STATE_FAILED", "working", "TASK_STATE_INPUT_REQUIRED"])
+def test_a2a_rejects_incomplete_tasks_even_with_cited_artifacts(state):
+    ok, detail = smoke_module.validate_a2a_answer({"task": {
+        "status": {"state": state},
+        "artifacts": [{"parts": [{"text": "Required (PA-001 §PA-3)."}]}],
+    }})
+    assert not ok
+    assert state in detail
+
+
+@pytest.mark.parametrize("wrapped,state", [(True, "TASK_STATE_COMPLETED"), (False, "completed")])
+def test_a2a_accepts_cited_completed_tasks(wrapped, state):
+    task = {"status": {"state": state}, "artifacts": [{"parts": [{"text": "Required (PA-001 §PA-3)."}]}]}
+    assert smoke_module.validate_a2a_answer({"task": task} if wrapped else task)[0]
+
+
+@pytest.mark.parametrize("wrapped", [True, False])
+def test_a2a_accepts_cited_message(wrapped):
+    message = {"parts": [{"text": "Required (PA-001 §PA-3)."}]}
+    assert smoke_module.validate_a2a_answer({"message": message} if wrapped else message)[0]
+
+
+@pytest.mark.parametrize("answer", ["", "Requires prior authorization.", "Sources: none"])
+def test_a2a_rejects_missing_citations_and_ignores_history(answer):
+    task = {
+        "status": {"state": "TASK_STATE_COMPLETED"},
+        "artifacts": [{"parts": [{"text": answer}]}],
+        "history": [{"parts": [{"text": "Please cite PA-001 §PA-3."}]}],
+    }
+    assert not smoke_module.validate_a2a_answer({"task": task})[0]

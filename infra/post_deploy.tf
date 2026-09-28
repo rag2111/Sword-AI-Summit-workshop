@@ -3,7 +3,8 @@
 # Requires `uv` and a logged-in Azure CLI on the machine running Terraform.
 
 locals {
-  docs_hash = sha1(join("", [for f in sort(fileset("${path.module}/data/care-docs", "*.md")) : filesha1("${path.module}/data/care-docs/${f}")]))
+  docs_hash        = sha1(join("", [for f in sort(fileset("${path.module}/data/care-docs", "*.md")) : filesha1("${path.module}/data/care-docs/${f}")]))
+  base_agent_model = coalesce(var.base_agent_model_deployment, local.chat_model)
 }
 
 resource "terraform_data" "seed_knowledge" {
@@ -44,7 +45,7 @@ resource "terraform_data" "base_agent" {
     knowledge   = terraform_data.seed_knowledge[0].id
     script      = filesha1("${path.module}/scripts/create_base_agent.py")
     model_route = var.base_agent_model_route
-    chat        = local.chat_model
+    chat        = local.base_agent_model
     a2a_mode    = var.a2a_mode
     gateway     = try(azapi_resource.apim_gateway_connection[0].id, "none")
   }
@@ -56,7 +57,7 @@ resource "terraform_data" "base_agent" {
       FOUNDRY_PROJECT_ENDPOINT    = module.foundry.project_endpoint
       FOUNDRY_PROJECT_RESOURCE_ID = module.foundry.project_id
       SEARCH_CONNECTION_NAME      = module.foundry.search_connection_name
-      CHAT_DEPLOYMENT             = local.chat_model
+      CHAT_DEPLOYMENT             = local.base_agent_model
       MODEL_ROUTE                 = var.base_agent_model_route
       APIM_CONNECTION_NAME        = try(azapi_resource.apim_gateway_connection[0].name, "")
       # Incoming A2A (preview) is only needed when APIM talks to Foundry's native A2A endpoint.

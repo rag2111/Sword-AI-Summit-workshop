@@ -276,6 +276,9 @@ Pricing pages to verify: [API Management](https://azure.microsoft.com/pricing/de
   and participant model calls are unchanged. Cached gateway failures apply only to the attempted
   definition hash; changing the definition retries APIM. Smoke tests target the created agent version,
   and failures without a successful fallback stop the script.
+  `base_agent_model_deployment` optionally selects an existing deployment for the remote knowledge
+  agent without changing participant chat. For example, use `gpt-6-sol` if `gpt-6-luna` is rejected by
+  Foundry Agent Service; availability must be verified with a cited policy answer, not just model chat.
 * **Identity:** keys are disabled on Foundry and Storage; APIM, Search, the Foundry project and the
   Container Apps use managed identities with least-privilege roles (`rbac.tf`). Backends reachable from
   the internet (Container Apps) require a shared secret header that only APIM (named value) knows.
@@ -309,7 +312,7 @@ things that do not strictly go through APIM are in [`../docs/apim-exceptions/inf
 | Symptom | Fix |
 |---|---|
 | Foundry `embedded schema validation failed` / API version invalid | The Foundry module uses ARM `2026-05-01`, supported by the pinned AzAPI provider. Keep schema validation enabled; run `terraform validate` after changing API versions. |
-| Search KB PUT rejects `outputMode` with API `2026-04-01` | The seeder sends only GA KB fields by default; `outputMode`, `retrievalInstructions`, and `retrievalReasoningEffort` are included only with an explicit preview `SEARCH_KB_API_VERSION`. Re-apply after updating the script; its hash triggers reseeding even if the previous run completed in index fallback mode. |
+| Search KB PUT rejects `outputMode` with API `2026-04-01` | The seeder sends GA fields on the initial GA request. If query-planning models are rejected, the model-less fallback uses the preview MCP API version to persist `retrievalReasoningEffort = minimal` and `outputMode = extractiveData`. Without these settings, the KB exists but MCP retrieval fails. Re-apply after updating the script; its hash triggers reseeding. |
 | APIM `azuremonitor` logger / global `policy` already exists | These built-in objects use `azapi_update_resource`, not creation. No import is needed after the failed initial apply. Removing an update resource does not revert its properties; destroying the APIM service removes its children. |
 | Product/API association returns `405 Method Not Allowed` on GET | Bindings use `azurerm_api_management_product_api`, which checks existence with HEAD. All participant routes, including optional REST access, use this resource. |
 | `InsufficientQuota` / `DeploymentModelNotSupported` on a deployment | Lower `capacity`, change `sku` (e.g. `Standard`) or region; check `az cognitiveservices usage list`. |
@@ -318,6 +321,7 @@ things that do not strictly go through APIM are in [`../docs/apim-exceptions/inf
 | Name conflict after destroy + apply | Soft-deleted resources: `az apim deletedservice purge -n <apim> -l <region>`; `az cognitiveservices account purge -n <foundry> -g <rg> -l <region>`. |
 | Token tiles in the workbook are empty | Enable custom metrics **with dimensions** on Application Insights (see Observability). |
 | `/a2a/care-knowledge` 401/403/404 | Check `out/base_agent.json` (`a2a_enabled`), APIM MI has *Foundry User* on the project; try `a2a_apim_api_kind = "http"`, else `a2a_mode = "adapter"`. |
+| A2A returns a failed task or an answer without citations | Inspect adapter logs and the knowledge MCP response, not just HTTP 200. Agent setup revalidates cached versions for a policy citation and republishes the working definition if a newer failed version displaced it: unversioned A2A calls use the latest version. The A2A smoke check rejects failed/incomplete tasks, empty answers, and missing policy citations. |
 | `/a2a/care-knowledge` read timeout while other routes pass | In adapter mode, check `az containerapp revision list -g <rg> -n care-knowledge-a2a -o table` and `az containerapp logs show -g <rg> -n care-knowledge-a2a --type console --tail 60`. A startup crash can leave APIM waiting for a backend; increasing the client timeout will not fix it. `An A2A agent card requires a description` means the image predates the fix that supplies public metadata to `AgentA2AAdapter` before `get_card()`. Review a Terraform plan and re-apply to rebuild the source-hashed image and deploy a new revision. |
 | MCP `tools/list` misses tools / tool creation 400 | The tool `operationId` must be the ARM ID of an imported operation named after the OpenAPI `operationId`: `az apim api operation list -g <rg> -n <apim> --api-id care-tools-api -o table`. |
 | MCP client hangs / streaming breaks | A diagnostic or policy is reading the response body; keep frontend response bytes = 0 and do not use `context.Response.Body` in MCP policies. |

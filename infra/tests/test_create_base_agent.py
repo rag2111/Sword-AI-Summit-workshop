@@ -7,6 +7,7 @@ from unittest.mock import Mock
 
 import pytest
 from azure.ai.projects.models import MCPTool
+from azure.core.exceptions import ResourceNotFoundError
 
 from _helpers import INFRA
 
@@ -29,7 +30,15 @@ def setup(monkeypatch, tmp_path):
     monkeypatch.setattr(agent, "OUT_FILE", tmp_path / "base_agent.json")
     monkeypatch.setattr(agent, "DefaultAzureCredential", Mock())
     project = Mock()
-    project.agents.create_version.side_effect = [SimpleNamespace(version="2"), SimpleNamespace(version="3")]
+    project.agents.get.return_value.versions.latest.version = "1"
+    versions = iter(["2", "3"])
+
+    def create_version(**kwargs):
+        version = next(versions)
+        project.agents.get.return_value.versions.latest.version = version
+        return SimpleNamespace(version=version)
+
+    project.agents.create_version.side_effect = create_version
     monkeypatch.setattr(agent, "AIProjectClient", Mock(return_value=project))
     tool = MCPTool(server_label="care_kb", server_url="https://example.search.windows.net/mcp")
     monkeypatch.setattr(agent, "grounding_tool", Mock(return_value=tool))
@@ -86,18 +95,19 @@ def test_auto_keeps_failure_cache_for_same_definition(setup):
     save_previous(tool, apim_definition_sha256=digest)
     agent.main()
     project.agents.create_version.assert_not_called()
-    smoke.assert_not_called()
+    smoke.assert_called_once_with(project, "1")
     assert read_result()["model_route"] == "direct"
 
 
-def test_failed_retry_updates_cache_when_reusing_direct_version(setup):
+def test_failed_retry_publishes_direct_fallback_as_latest(setup):
     project, tool, smoke = setup
     save_previous(tool)
-    smoke.return_value = "gateway unavailable"
+    smoke.side_effect = ["gateway unavailable", None]
     agent.main()
-    assert project.agents.create_version.call_count == 1
+    assert project.agents.create_version.call_count == 2
     result = read_result()
-    assert result["version"] == "1"
+    assert result["version"] == "3"
+    assert project.agents.get.return_value.versions.latest.version == "3"
     assert result["model_route"] == "direct"
     assert result["apim_route_error"] == "gateway unavailable"
     assert result["apim_definition_sha256"] == agent.definition_for(
@@ -166,14 +176,14 @@ def test_successful_unchanged_apim_definition_reuses_version(setup):
     smoke.reset_mock()
     agent.main()
     project.agents.create_version.assert_not_called()
-    smoke.assert_not_called()
+    smoke.assert_called_once_with(project, "2")
     assert read_result()["model_route"] == "apim"
 
 
 def test_smoke_targets_exact_version():
     project = Mock()
     client = project.get_openai_client.return_value
-    client.responses.create.return_value.output_text = "A cited answer."
+    client.responses.create.return_value.output_text = "Post-discharge follow-up SLA (FU-001 §FU-3)."
     assert agent.smoke_invoke(project, "7") is None
     assert client.responses.create.call_args.kwargs["extra_body"]["agent_reference"] == {
         "name": agent.AGENT_NAME, "version": "7", "type": "agent_reference",
@@ -187,3 +197,37 @@ def test_smoke_reports_empty_response_and_api_errors():
     assert agent.smoke_invoke(project, "7") == "empty response"
     client.responses.create.side_effect = RuntimeError("tools/reasoning rejected")
     assert agent.smoke_invoke(project, "7") == "tools/reasoning rejected"
+
+
+def test_smoke_rejects_uncited_policy_answer():
+    project = Mock()
+    project.get_openai_client.return_value.responses.create.return_value.output_text = "Follow up in two days."
+    assert agent.smoke_invoke(project, "7") == "missing follow-up policy citation (FU-001 + section)"
+
+
+def test_cached_fallback_is_republished_when_latest_is_broken(setup):
+    project, tool, smoke = setup
+    _, digest = agent.definition_for("apim-gateway/gpt-6-luna", tool, model_route="apim")
+    save_previous(tool, apim_definition_sha256=digest)
+    project.agents.get.return_value.versions.latest.version = "broken"
+    agent.main()
+    assert read_result()["version"] == "2"
+    assert read_result()["model_route"] == "direct"
+    smoke.assert_called_once_with(project, "2")
+
+
+def test_reused_version_is_revalidated(setup):
+    project, _, smoke = setup
+    agent.main()
+    smoke.return_value = "missing citation"
+    with pytest.raises(SystemExit, match="Test invocation failed"):
+        agent.main()
+
+
+def test_latest_lookup_handles_missing_agent_but_propagates_other_errors():
+    project = Mock()
+    project.agents.get.side_effect = ResourceNotFoundError("missing")
+    assert not agent.version_is_latest(project, "1")
+    project.agents.get.side_effect = RuntimeError("access denied")
+    with pytest.raises(RuntimeError, match="access denied"):
+        agent.version_is_latest(project, "1")

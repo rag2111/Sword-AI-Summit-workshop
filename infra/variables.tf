@@ -146,6 +146,17 @@ variable "telemetry_require_subscription_key" {
   default     = true
 }
 
+variable "base_agent_model_deployment" {
+  description = "Optional existing Foundry deployment for the remote knowledge agent only. Null uses the participant chat deployment."
+  type        = string
+  default     = null
+
+  validation {
+    condition     = var.base_agent_model_deployment == null ? true : length(trimspace(var.base_agent_model_deployment)) > 0
+    error_message = "base_agent_model_deployment must be null or a non-empty deployment name."
+  }
+}
+
 variable "base_agent_model_route" {
   description = "Where the base agent's model calls go: 'apim' (Foundry AI-gateway connection to APIM, PREVIEW), 'direct' (Foundry deployment), 'auto' (try APIM, verify, fall back to direct)."
   type        = string

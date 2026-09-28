@@ -39,12 +39,15 @@ all of them explicitly.
 | `uv run poe a2a-card` | fetch and pretty-print the base agent's Agent Card through APIM |
 | `uv run poe lab3` | ask a prior-auth policy question that is delegated over A2A; prints citations |
 | `uv run poe traces` | print the KQL / portal links to find your traces (filter by PARTICIPANT_ID) |
-| `uv run poe evals` | run local evaluations with weighted rubric → `evals/out/<run-id>/` (`--ids`, `--limit`, `--no-judge`, `--rescore`, `--candidate vN`) |
+| `uv run poe evals` | run local evaluations with weighted rubric → `evals/out/<run-id>/` (`--ids`, `--limit`, `--judge-delay`, `--no-judge`, `--rescore`, `--candidate vN`) |
 | `uv run poe redteam` | generate adversarial prompts from the escalation & safety policy and evaluate them (`--offline`, `--foundry` preview) |
 | `uv run poe upload-evals` | upload the latest local run to the Foundry project via APIM /foundry |
 | `uv run poe cloud-eval` | start a cloud evaluation in Foundry via APIM /foundry (preview; fallback = upload) |
-| `uv run poe loop` | Lab 6 pipeline: pull low-scoring traces/results → cluster & rank failure modes → propose change → re-run evals → promote if better (`--quick`, `--offline`, `--no-promote`) |
+| `uv run poe loop` | Lab 6 pipeline: pull low-scoring traces/results → cluster & rank failure modes → propose change → re-run evals → promote if better (`--quick`, `--limit N`, `--judge-delay`, `--offline`, `--no-promote`) |
+| `uv run poe loop --limit 3` | use the first three golden cases throughout the loop, per version; overrides `--quick` and never auto-promotes |
+| `uv run poe loop --limit 3 --offline` | same three-case rehearsal with deterministic scoring and a template proposal; agent calls still use the gateway |
 | `uv run poe promote` | promote candidate agent version with lineage (version, eval run ID, trace IDs) into `agent_versions/registry.json` |
+| `uv run poe promote-force --version v3` | **demo only:** activate an explicit existing version without requiring validation; alias for `uv run poe promote --version v3 --force`; does not run evaluations |
 | `uv run poe rollback` | roll back to previous agent version |
 | `uv run poe catchup <N>` | copy `solutions/labN/` into `src/care_agent/` |
 | `uv run poe docs` | optionally serve the prebuilt static guide at http://127.0.0.1:8000; no server is needed when opening `guide/index.html` directly |

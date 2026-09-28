@@ -2,6 +2,7 @@
 
 The registry entry keeps: version, parent, instructions_hash, eval_run_id, trace_ids, timestamp, status.
 The agent reads the active version at startup (care_agent.instructions.load_active_instructions, Lab 6).
+`uv run poe promote-force --version vN` is the demo-only alias for `promote --version vN --force`.
 """
 
 from __future__ import annotations
@@ -23,6 +24,9 @@ def main(argv: list[str] | None = None) -> int:
     if not version:
         print("No validated candidate. Run `uv run poe loop` first (or use --version vN --force for a demo).")
         return 1
+    if args.force:
+        print(f"WARNING: forced promotion of {version} bypasses validation (demo only). "
+              "It does not run evaluations or prove that safety gates passed.")
     try:
         entry = promote(version, require_validation=not args.force)
     except (KeyError, ValueError) as exc:

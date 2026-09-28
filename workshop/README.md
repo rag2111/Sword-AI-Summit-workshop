@@ -82,7 +82,9 @@ Fell behind? `uv run poe catchup <N>` copies the end-of-lab-N solution into `src
 | `uv run poe upload-evals` | upload the latest local run to the Foundry project via APIM /foundry |
 | `uv run poe cloud-eval` | cloud evaluation in Foundry via APIM /foundry (preview; fallback = upload) |
 | `uv run poe loop` | Lab 6: failures → clusters → proposal → re-run evals → promote if better |
+| `uv run poe loop --limit 3` | first three golden cases per version; never auto-promotes; add `--offline` for deterministic scoring or `--judge-delay 10` to pace judge calls |
 | `uv run poe promote` / `rollback` | move the active agent version (lineage in `agent_versions/registry.json`) |
+| `uv run poe promote-force --version v3` | **demo only:** force an explicit existing version active, bypassing validation; equivalent to `uv run poe promote --version v3 --force` |
 | `uv run poe catchup <N>` | copy `solutions/labN/` into `src/care_agent/` |
 | `uv run poe docs` | optionally serve the prebuilt static guide at http://127.0.0.1:8000 |
 | `uv run poe docs-build` | regenerate `guide/index.html` after editing the source docs or UI |

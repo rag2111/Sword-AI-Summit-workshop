@@ -17,8 +17,8 @@ What it does
        mode "index" -> FALLBACK: Azure AI Search tool on the classic index `care-docs`.
   2. Builds a versioned prompt agent (Foundry Agent Service, new agents API):
        project.agents.create_version(agent_name, PromptAgentDefinition(...))
-     A new version is created ONLY when the definition hash changed (stored in out/base_agent.json and
-     in the version metadata).
+     Reuse a matching definition only if it is still the latest version; otherwise publish and validate
+     a new version. The definition hash is stored in out/base_agent.json and in the version metadata.
   3. Model route: "apim" uses the APIM AI-gateway project connection (`<connection>/<deployment>`,
      PREVIEW) so the agent's model calls are governed by APIM; "auto" verifies it with one test call
      and falls back to the direct deployment if the platform rejects it (recorded in the output).
@@ -34,6 +34,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import re
 import sys
 import time
 from pathlib import Path
@@ -55,6 +56,7 @@ from azure.ai.projects.models import (
     Reasoning,
     ResponsesProtocolConfiguration,
 )
+from azure.core.exceptions import ResourceNotFoundError
 from azure.identity import DefaultAzureCredential
 
 INFRA_DIR = Path(__file__).resolve().parents[1]
@@ -140,23 +142,26 @@ def definition_for(model: str, tool, *, model_route: str) -> tuple[PromptAgentDe
     return definition, digest
 
 
-def version_exists(project: AIProjectClient, version: str) -> bool:
+def version_is_latest(project: AIProjectClient, version: str) -> bool:
     try:
-        project.agents.get_version(agent_name=AGENT_NAME, agent_version=version)
-        return True
-    except Exception:  # noqa: BLE001 - any failure means "recreate"
+        return str(project.agents.get(agent_name=AGENT_NAME).versions.latest.version) == version
+    except ResourceNotFoundError:
         return False
 
 
 def smoke_invoke(project: AIProjectClient, version: str) -> str | None:
-    """One tiny call through the agent; returns an error string or None on success."""
+    """Require a cited policy answer from the exact version; return an error string or None."""
     try:
         openai = project.get_openai_client()
         response = openai.responses.create(
             input="Which document defines the post-discharge follow-up SLA? Answer in one sentence.",
             extra_body={"agent_reference": {"name": AGENT_NAME, "version": version, "type": "agent_reference"}},
         )
-        return None if response.output_text else "empty response"
+        if not response.output_text:
+            return "empty response"
+        if not re.search(r"\bFU-001\s*§\s*FU-\d", response.output_text):
+            return "missing follow-up policy citation (FU-001 + section)"
+        return None
     except Exception as exc:  # noqa: BLE001
         return str(exc)[:300]
 
@@ -194,8 +199,11 @@ def main() -> None:
     apim_error = previous.get("apim_route_error") if apim_known_broken else None
     for model_route, model in candidates:
         definition, digest = definition_for(model, tool, model_route=model_route)
-        if previous.get("definition_sha256") == digest and version_exists(project, previous.get("version", "")):
+        if previous.get("definition_sha256") == digest and version_is_latest(project, previous.get("version", "")):
             print(f"  definition unchanged (sha256 {digest}) - keeping version {previous['version']}")
+            error = smoke_invoke(project, previous["version"])
+            if error:
+                sys.exit(f"Test invocation failed for {model_route} version {previous['version']}: {error}")
             result = previous
             break
         kwargs = {"agent_name": AGENT_NAME, "definition": definition,

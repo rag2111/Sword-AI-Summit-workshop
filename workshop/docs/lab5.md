@@ -48,6 +48,14 @@ weights so you can restore them before Lab 6. Model calls and evaluation judges 
     errors before spending the budget on the full golden set. A **FAIL** verdict is a finding, not a
     command malfunction.
 
+    For a smaller smoke test using the first three golden cases, with paced judge calls:
+    ```bash
+    uv run poe evals --limit 3 --judge-delay 5
+    ```
+    Use `--no-judge` to skip LLM judges (the agent still calls the gateway). A small subset is not a full
+    safety evaluation. In [Lab 6](lab6.md), use `uv run poe loop --limit 3` for the corresponding limited
+    improvement loop; it disables automatic promotion.
+
 !!! dothis "3. Full run"
     ```bash
     uv run poe evals
@@ -148,14 +156,20 @@ cases, rubric and judge settings, and retain your local summary files as the sou
 
 !!! troubleshoot "400: `max_tokens` is not supported"
     The workshop's `gpt-6-sol` judge (and `gpt-6-luna` override) requires `max_completion_tokens`.
-    The runner enables the SDK's `is_reasoning_model` option for these deployments, which also removes
-    unsupported sampling parameters. The shared custom-judge helper uses `max_completion_tokens` and
-    `reasoning_effort: none`, so short JSON verdicts do not spend their output budget on hidden reasoning.
+    The runner's compatibility adapter uses `max_completion_tokens`, removes unsupported sampling
+    parameters, and sets `reasoning_effort: none`. Unlike the SDK's default reasoning mode (60,000
+    completion tokens), it preserves each evaluator's native budget: 800 for intent/grounding/relevance,
+    3,000 for task adherence and 5,000 for tool accuracy. The custom-judge helper also disables hidden reasoning.
     After updating the workshop code, verify with `uv run poe evals --ids G10` (diagnosis refusal).
     `--rescore` only recomputes rubric scores from saved metrics; it does not retry failed judges.
     Re-running G01/G03 can create additional synthetic bookings or referrals.
 
 !!! troubleshoot "429 during evals"
+    Update the code before retrying: the pinned SDK's default reasoning mode requests up to 60,000
+    completion tokens. The compatibility adapter avoids that inflated allowance without changing the
+    evaluation prompts or scoring. `--judge-delay` only spaces evaluator calls; it cannot guarantee
+    that requests fit either the APIM participant budget or the backend deployment's TPM limit.
+
     Judges and the agent share your token budget. `--concurrency 1` (the default) now applies to both
     agent collection and judging; increasing it can cause competing retries. Stop other runs using
     the same participant key while evaluating. Use `--ids` for a subset, or `--no-judge` for deterministic

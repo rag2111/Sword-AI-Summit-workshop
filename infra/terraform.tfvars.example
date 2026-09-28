@@ -25,6 +25,7 @@ model_deployments = [
 a2a_mode                           = "native_foundry" # or "adapter"
 a2a_apim_api_kind                  = "a2a"            # or "http"
 base_agent_model_route             = "auto"           # or "apim" / "direct"
+base_agent_model_deployment        = null             # Existing deployment override for the knowledge agent only.
 knowledge_mode                     = "auto"           # or "kb" / "index"
 telemetry_require_subscription_key = true             # false = anonymous, iKey-filtered fallback
 enable_content_safety              = false

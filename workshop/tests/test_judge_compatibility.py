@@ -9,7 +9,7 @@ import httpx
 import pytest
 
 from evals.judge import chat
-from evals.run_evals import Judges, load_dataset, score_row
+from evals.run_evals import Judges, RequestPacer, load_dataset, score_row
 from evals.scoring import load_rubric
 from tests.helpers import BASE, KEY, make_settings
 
@@ -146,6 +146,24 @@ def test_custom_judge_does_not_retry_bad_requests(monkeypatch):
     with pytest.raises(httpx.HTTPStatusError):
         chat(make_settings(), system="Return JSON.", user="Test.")
     assert len(requests) == 1
+
+
+def test_request_pacer_spaces_requests(monkeypatch):
+    clock = Mock(side_effect=[10.0, 10.0, 12.0, 15.0])
+    sleep = Mock()
+    monkeypatch.setattr("evals.run_evals.time.monotonic", clock)
+    monkeypatch.setattr("evals.run_evals.time.sleep", sleep)
+
+    pacer = RequestPacer(5.0)
+    pacer.wait()
+    pacer.wait()
+
+    sleep.assert_called_once_with(3.0)
+
+
+def test_request_pacer_rejects_negative_delay():
+    with pytest.raises(ValueError, match="zero or greater"):
+        RequestPacer(-1.0)
 
 
 def test_score_row_passes_observed_tool_evidence_and_actual_instructions(monkeypatch, caplog):

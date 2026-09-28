@@ -57,19 +57,17 @@ def test_kb_payload_matches_selected_api(search, monkeypatch, api):
 
 
 @pytest.mark.parametrize("api", ["2026-04-01", "2026-08-01-preview"])
-def test_no_model_retry_also_matches_selected_api(search, monkeypatch, api):
+def test_no_model_retry_persists_minimal_retrieval_using_preview(search, monkeypatch, api):
     monkeypatch.setattr(seed, "SEARCH_KB_API", api)
     search.upsert.side_effect = ["created", http_error(400), "created"]
     seed.ensure_knowledge_base(search, "/subscriptions/test/storage", "care-docs")
     assert search.upsert.call_count == 3
     path, body, version = search.upsert.call_args.args
-    assert path == "knowledgebases/care-kb" and version == api
+    assert path == "knowledgebases/care-kb"
+    assert version == (api if api.endswith("-preview") else seed.SEARCH_KB_MCP_API)
     assert "models" not in body and "retrievalInstructions" not in body
-    if api.endswith("-preview"):
-        assert body["retrievalReasoningEffort"] == {"kind": "minimal"}
-        assert body["outputMode"] == "extractiveData"
-    else:
-        assert set(body) == GA_FIELDS - {"models"}
+    assert body["retrievalReasoningEffort"] == {"kind": "minimal"}
+    assert body["outputMode"] == "extractiveData"
 
 
 @pytest.mark.parametrize("status", [401, 403, 429, 500])

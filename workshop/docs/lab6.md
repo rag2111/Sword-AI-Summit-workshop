@@ -52,9 +52,32 @@ than assuming it will always be `v2`. Running the loop can change the active ver
     uv run poe loop --quick
     ```
     `--quick` validates on your failing cases plus all critical cases (baseline re-run on the same set).
+    The loop spaces judge requests by 5 seconds to reduce pressure on the participant token-per-minute
+    budget. Override this only when instructed, for example `--judge-delay 10` for a lower-quota deployment.
     To reduce judge costs, `uv run poe loop --offline` uses deterministic metrics and a template proposal.
     Agent validation still makes gateway/model calls. To inspect the candidate before changing the active
     version, use `uv run poe loop --quick --no-promote` instead.
+
+    For a short rehearsal with at most three golden cases per evaluation:
+    ```bash
+    uv run poe loop --limit 3
+    ```
+    `--limit N` must be a positive integer. It selects the first N cases in `evals/golden.jsonl`
+    (or all cases if fewer are available), filters failure analysis to those IDs, and compares
+    the baseline and candidate on the same IDs. It also limits the initial baseline if no saved run
+    covers those cases. If combined with `--quick`, `--limit` takes precedence.
+    Three cases means three per version, not three model calls: each case has several judges.
+    If all selected cases pass, the loop stops without proposing a change.
+    Limited runs never auto-promote; validate the candidate on the full set before promotion.
+    This is a smoke test, not full safety coverage. For a faster template-based rehearsal:
+    ```bash
+    uv run poe loop --limit 3 --offline
+    ```
+    This skips LLM judges and uses a template proposal; the agent still calls the gateway.
+    To space judge requests more conservatively without disabling them:
+    ```bash
+    uv run poe loop --limit 3 --judge-delay 10
+    ```
 
 !!! dothis "4. Inspect the lineage"
     Open `agent_versions/registry.json` and `agent_versions/candidates/<candidate-version>/change.diff`.
@@ -71,8 +94,29 @@ than assuming it will always be `v2`. Running the loop can change the active ver
     ```
     Reopen the registry and verify `active` points to the prior version. Start a new chat to verify its footer.
     You can promote a validated candidate again with `uv run poe promote --version v2` (substitute your version).
-    If the candidate was rejected, do not force a promotion or roll back an unrelated version: verify that
-    `active` is unchanged and read the rejection reason. That is a successful safety-gate exercise.
+    If the candidate was rejected, normally leave it inactive and read the rejection reason.
+    That is a successful safety-gate exercise. Do not roll back an unrelated version.
+
+!!! warning "Optional demo override: force promotion of an explicit version"
+    Only for the synthetic workshop demo, you can activate an existing candidate even if it is
+    unvalidated or rejected. Replace `v3` with the version you inspected in the registry:
+    ```bash
+    uv run poe promote-force --version v3
+    ```
+    This is an alias for the existing command:
+    ```bash
+    uv run poe promote --version v3 --force
+    ```
+    `promote-force` requires `--version`; it never chooses a version implicitly.
+    It bypasses the validation requirement, changes the active pointer and preserves any existing
+    evaluation evidence; it does not run evaluations or turn a failed result into a pass.
+    A limited or offline run is not proof of full safety coverage. Prefer full validation followed
+    by `uv run poe promote --version v3` outside this explicit demo override.
+
+    Restart the chat to load the new active instructions. To undo the promotion:
+    ```bash
+    uv run poe rollback
+    ```
 
 ## Expected output
 
@@ -112,6 +156,22 @@ This example shows a successful promotion. Your candidate may be rejected, or th
 
 !!! troubleshoot "Candidate rejected: `does not beat baseline`"
     LLM judges are noisy on small sets; the gate requires +0.01. Run without `--quick`, or accept the rejection.
+
+!!! troubleshoot "Repeated `429` / `Retrying in ... seconds` warnings"
+    Update the code and restart the command: the pinned SDK's reasoning mode defaults to 60,000
+    completion tokens. The workshop adapter preserves the evaluators' native 800/3,000/5,000-token
+    budgets and disables hidden reasoning for the supported workshop models.
+    Stop other commands that use the same participant key. Pacing alone cannot guarantee that
+    requests fit the token budget; the SDK warnings are retries, not final failures.
+    The `judging N cases` progress bar tracks scoring after agent collection has completed.
+
+    To resume validation of an existing candidate without proposing another version, use its actual ID:
+    `uv run python -m loop.validate --version v3 --judge-delay 5`.
+    This validates the full golden set and does not promote; inspect the comparison before running
+    `uv run poe promote --version v3`. To reproduce a quick subset instead, pass its case IDs with `--ids`.
+    If 429s persist, the presenter should check both the APIM participant budget and the backend
+    deployment's TPM usage. Do not increase quotas automatically or treat missing judge metrics as proof
+    that the candidate improved.
 
 !!! troubleshoot "Chat still shows version v1 after promotion"
     You skipped step 2 — without it the agent always runs the built-in baseline.

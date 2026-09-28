@@ -53,7 +53,13 @@ def compare(baseline: dict[str, Any], candidate: dict[str, Any], rubric: dict[st
     }
 
 
-def validate(version: str, *, ids: list[str] | None = None, use_judge: bool = True) -> tuple[dict[str, Any], Path]:
+def validate(
+    version: str,
+    *,
+    ids: list[str] | None = None,
+    use_judge: bool = True,
+    judge_delay_seconds: float = 0.0,
+) -> tuple[dict[str, Any], Path]:
     settings = get_settings()
     rubric = load_rubric()
     registry = load_registry()
@@ -65,14 +71,16 @@ def validate(version: str, *, ids: list[str] | None = None, use_judge: bool = Tr
         print(f"Running baseline {baseline_version} on the same {len(cases)} cases…")
         baseline_dir, baseline, _ = asyncio.run(
             run_evaluation(settings, cases=cases, rubric=rubric, version=baseline_version,
-                           instructions=instructions_for(baseline_version, registry=registry), use_judge=use_judge)
+                           instructions=instructions_for(baseline_version, registry=registry), use_judge=use_judge,
+                           judge_delay_seconds=judge_delay_seconds)
         )
     else:
         baseline = load_run(baseline_dir)[0]
     print(f"Running candidate {version} on {len(cases)} cases…")
     candidate_dir, candidate, _ = asyncio.run(
         run_evaluation(settings, cases=cases, rubric=rubric, version=version,
-                       instructions=instructions_for(version, registry=registry), use_judge=use_judge)
+                       instructions=instructions_for(version, registry=registry), use_judge=use_judge,
+                       judge_delay_seconds=judge_delay_seconds)
     )
     comparison = compare(baseline, candidate, rubric)
     (candidate_dir / "comparison.json").write_text(json.dumps(comparison, indent=2) + "\n", encoding="utf-8")
@@ -86,12 +94,18 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--version", help="candidate version (default: latest candidate)")
     parser.add_argument("--ids", help="comma-separated case IDs (baseline is re-run on the same cases)")
     parser.add_argument("--no-judge", action="store_true")
+    parser.add_argument("--judge-delay", type=float, default=0.0, metavar="SECONDS")
     args = parser.parse_args(argv)
     version = args.version or latest_candidate(load_registry(), statuses=("candidate",))
     if not version:
         print("No candidate to validate. Run `uv run poe loop` (or loop/propose.py) first.")
         return 1
-    comparison, _ = validate(version, ids=args.ids.split(",") if args.ids else None, use_judge=not args.no_judge)
+    comparison, _ = validate(
+        version,
+        ids=args.ids.split(",") if args.ids else None,
+        use_judge=not args.no_judge,
+        judge_delay_seconds=args.judge_delay,
+    )
     print(json.dumps(comparison, indent=2))
     return 0 if comparison["passed"] else 1
 

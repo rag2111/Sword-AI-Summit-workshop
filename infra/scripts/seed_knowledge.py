@@ -243,10 +243,13 @@ def ensure_knowledge_base(search: Search, storage_resource_id: str, container: s
             raise
         # LLM query planning may not be available for this API version/region: keep the KB, drop the LLM.
         minimal = {k: v for k, v in knowledge_base.items() if k not in ("models", "retrievalInstructions")}
-        if SEARCH_KB_API.endswith("-preview"):
-            minimal["retrievalReasoningEffort"] = {"kind": "minimal"}
+        # MCP defaults to reasoning that requires a model unless minimal is explicit.
+        # GA cannot persist this setting, so the model-less fallback needs the preview API.
+        minimal["retrievalReasoningEffort"] = {"kind": "minimal"}
+        minimal["outputMode"] = "extractiveData"
+        minimal_api = SEARCH_KB_API if SEARCH_KB_API.endswith("-preview") else SEARCH_KB_MCP_API
         print(f"  knowledge base {KNOWLEDGE_BASE} (no LLM): "
-              f"{search.upsert(kb_path, minimal, SEARCH_KB_API)}")
+              f"{search.upsert(kb_path, minimal, minimal_api)}")
 
     deadline = time.time() + 600
     while time.time() < deadline:
