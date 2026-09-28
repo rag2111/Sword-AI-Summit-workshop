@@ -612,6 +612,10 @@ Then type <code>/tools</code> (only <code>get_current_date</code> so far) and <c
 <div class="highlight"><pre><span></span><code>uv<span class="w"> </span>sync<span class="w"> </span>--extra<span class="w"> </span>devui
 uv<span class="w"> </span>run<span class="w"> </span>poe<span class="w"> </span>devui<span class="w">          </span><span class="c1"># opens http://127.0.0.1:8080</span>
 </code></pre></div>
+<p>The terminal prints <code>DevUI access token: ...</code>. Copy only the token value into DevUI's authentication
+prompt. This is a local UI token, <strong>not</strong> your APIM subscription key. Keep it private.
+A new token is generated each time the server starts unless you set <code>DEVUI_AUTH_TOKEN</code> in your
+environment or private <code>.env</code>; after restarting, use the token printed by the current process.</p>
 </div>
 <h2 id="lab1--expected-output">Expected output</h2>
 <div class="highlight"><pre><span></span><code>you › Should we increase Jordan Ellis's furosemide to 80 mg twice daily?
@@ -1570,6 +1574,14 @@ Updated catch-up solutions include this setting. The Responses API does not need
 <div class="admonition troubleshoot">
 <p class="admonition-title">DevUI not installed</p>
 <p><code>uv sync --extra devui</code> (preview package) — or use <code>uv run poe chat</code>.</p>
+</div>
+<div class="admonition troubleshoot">
+<p class="admonition-title">DevUI asks for an access token, but none appears</p>
+<p>Restart <code>uv run poe devui</code> with the updated launcher. It prints <code>DevUI access token: ...</code> directly
+in the terminal; the SDK's automatic token message was hidden at INFO log level.
+Paste only the token value into the UI, not <code>APIM_SUBSCRIPTION_KEY</code>.
+Tokens change on restart unless you set <code>DEVUI_AUTH_TOKEN</code> in your environment or private <code>.env</code>.
+Authentication stays enabled and the server listens only on <code>127.0.0.1</code>. Do not share the token.</p>
 </div>
 <div class="admonition troubleshoot">
 <p class="admonition-title">No traces in Application Insights</p>

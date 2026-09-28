@@ -113,6 +113,11 @@ The CLI is interactive: enter prompts after `you`, not in the PowerShell or Bash
 > uv sync --extra devui
 > uv run poe devui          # opens http://127.0.0.1:8080
 > ```
+>
+> The terminal prints `DevUI access token: ...`. Copy only the token value into DevUI's authentication
+> prompt. This is a local UI token, **not** your APIM subscription key. Keep it private.
+> A new token is generated each time the server starts unless you set `DEVUI_AUTH_TOKEN` in your
+> environment or private `.env`; after restarting, use the token printed by the current process.
 
 ## Expected output
 

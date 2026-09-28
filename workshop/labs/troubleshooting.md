@@ -67,6 +67,15 @@ Start with `uv run poe smoke`: it tests all five routes and prints a one-line ex
 > `uv sync --extra devui` (preview package) — or use `uv run poe chat`.
 
 > [!WARNING]
+> **DevUI asks for an access token, but none appears**
+>
+> Restart `uv run poe devui` with the updated launcher. It prints `DevUI access token: ...` directly
+> in the terminal; the SDK's automatic token message was hidden at INFO log level.
+> Paste only the token value into the UI, not `APIM_SUBSCRIPTION_KEY`.
+> Tokens change on restart unless you set `DEVUI_AUTH_TOKEN` in your environment or private `.env`.
+> Authentication stays enabled and the server listens only on `127.0.0.1`. Do not share the token.
+
+> [!WARNING]
 > **No traces in Application Insights**
 >
 > Ingestion takes 1–3 minutes. `uv run poe traces` shows your local span tree immediately.

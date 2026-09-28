@@ -6,6 +6,8 @@ Install it with `uv sync --extra devui`. Fallback if it is unavailable: `uv run 
 
 from __future__ import annotations
 
+import os
+import secrets
 import sys
 
 from .config import ConfigError, get_settings
@@ -33,8 +35,14 @@ def main() -> int:
         print(exc)
         return 0
     # Do NOT `async with` the agent here: DevUI connects MCP tools lazily and cleans them up itself.
+    auth_token = os.getenv("DEVUI_AUTH_TOKEN") or secrets.token_urlsafe(32)
     print("Training use only — synthetic data. Opening DevUI on http://127.0.0.1:8080 …")
-    serve(entities=[handle.agent], port=8080, auto_open=True)
+    print(f"DevUI access token: {auth_token}", flush=True)
+    print("Paste this token into DevUI's authentication prompt (not your APIM subscription key). Keep it private.")
+    serve(
+        entities=[handle.agent], host="127.0.0.1", port=8080, auto_open=True,
+        auth_enabled=True, auth_token=auth_token,
+    )
     return 0
 
 
