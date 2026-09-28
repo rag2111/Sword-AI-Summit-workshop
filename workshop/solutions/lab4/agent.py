@@ -68,6 +68,12 @@ def create_agent(settings: Settings, instructions: str, tools: list[Any]) -> Any
         description=AGENT_DESCRIPTION,
         instructions=instructions,
         tools=tools,
+        # This model requires reasoning disabled for Chat Completions function tools.
+        default_options=(
+            {"reasoning_effort": "none"}
+            if settings.chat_api != "responses" and settings.chat_model == "gpt-6-luna"
+            else None
+        ),
     )
 
 

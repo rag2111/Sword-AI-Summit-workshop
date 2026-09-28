@@ -42,6 +42,14 @@ Start with `uv run poe smoke`: it tests all five routes and prints a one-line ex
 ## Labs
 
 > [!WARNING]
+> **`Function tools with reasoning_effort are not supported for gpt-6-luna` (400)**
+>
+> The chat agent sends tools even in Lab 1 (`get_current_date`). For `gpt-6-luna` on Chat Completions,
+> set `default_options={"reasoning_effort": "none"}` on `Agent(...)` in `create_agent()`, not on
+> `OpenAIChatCompletionClient(...)`. See the model/API guard in [Lab 1, step 3](lab1.md).
+> Updated catch-up solutions include this setting. The Responses API does not need this override.
+
+> [!WARNING]
 > **`This step needs Lab N …`**
 >
 > A later lab's TODO is still open. Complete it, or `uv run poe catchup N`. Your code is backed up in

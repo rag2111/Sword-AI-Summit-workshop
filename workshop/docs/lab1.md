@@ -60,8 +60,18 @@ The CLI is interactive: enter prompts after `you`, not in the PowerShell or Bash
         description=AGENT_DESCRIPTION,
         instructions=instructions,
         tools=tools,              # for now: get_current_date only
+        default_options=(
+            {"reasoning_effort": "none"}
+            if settings.chat_api != "responses" and settings.chat_model == "gpt-6-luna"
+            else None
+        ),
     )
     ```
+
+    `gpt-6-luna` requires `reasoning_effort="none"` when using function tools on Chat Completions.
+    Even Lab 1 supplies a tool (`get_current_date`), so set this on the **Agent's `default_options`**,
+    not the chat-client constructor. It applies to every model request, including tool follow-ups.
+    Other models and the Responses API keep their existing defaults.
 
 !!! dothis "4. Chat"
     ```bash

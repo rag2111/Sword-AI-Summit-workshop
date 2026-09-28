@@ -81,12 +81,23 @@ def create_agent(settings: Settings, instructions: str, tools: list[Any]) -> Any
         description=AGENT_DESCRIPTION,
         instructions=instructions,
         tools=tools,
+        # This model requires reasoning disabled for Chat Completions function tools.
+        default_options=(
+            {"reasoning_effort": "none"}
+            if settings.chat_api != "responses" and settings.chat_model == "gpt-6-luna"
+            else None
+        ),
     )
     # [lab1:starter]
     # TODO (Lab 1): build the agent.
     #   from agent_framework import Agent
     #   return Agent(client=chat_client, name=AGENT_NAME, description=AGENT_DESCRIPTION,
-    #                instructions=instructions, tools=tools)
+    #                instructions=instructions, tools=tools,
+    #                default_options=(
+    #                    {"reasoning_effort": "none"}
+    #                    if settings.chat_api != "responses" and settings.chat_model == "gpt-6-luna"
+    #                    else None
+    #                ))
     raise LabIncomplete(1, "src/care_agent/agent.py → create_agent()", "return Agent(client=..., ...)")
     # [lab1:end]
 

@@ -575,8 +575,17 @@ block (keep the function signature) with:</p>
     <span class="n">description</span><span class="o">=</span><span class="n">AGENT_DESCRIPTION</span><span class="p">,</span>
     <span class="n">instructions</span><span class="o">=</span><span class="n">instructions</span><span class="p">,</span>
     <span class="n">tools</span><span class="o">=</span><span class="n">tools</span><span class="p">,</span>              <span class="c1"># for now: get_current_date only</span>
+    <span class="n">default_options</span><span class="o">=</span><span class="p">(</span>
+        <span class="p">{</span><span class="s2">"reasoning_effort"</span><span class="p">:</span> <span class="s2">"none"</span><span class="p">}</span>
+        <span class="k">if</span> <span class="n">settings</span><span class="o">.</span><span class="n">chat_api</span> <span class="o">!=</span> <span class="s2">"responses"</span> <span class="ow">and</span> <span class="n">settings</span><span class="o">.</span><span class="n">chat_model</span> <span class="o">==</span> <span class="s2">"gpt-6-luna"</span>
+        <span class="k">else</span> <span class="kc">None</span>
+    <span class="p">),</span>
 <span class="p">)</span>
 </code></pre></div>
+<p><code>gpt-6-luna</code> requires <code>reasoning_effort="none"</code> when using function tools on Chat Completions.
+Even Lab 1 supplies a tool (<code>get_current_date</code>), so set this on the <strong>Agent's <code>default_options</code></strong>,
+not the chat-client constructor. It applies to every model request, including tool follow-ups.
+Other models and the Responses API keep their existing defaults.</p>
 </div>
 <div class="admonition dothis">
 <p class="admonition-title">4. Chat</p>
@@ -1541,6 +1550,13 @@ Or use Codespaces.</p>
 <p>The file must be <code>workshop/.env</code> (not <code>.env.txt</code>). Values in your shell environment win over <code>.env</code>.</p>
 </div>
 <h2 id="troubleshooting--labs">Labs</h2>
+<div class="admonition troubleshoot">
+<p class="admonition-title"><code>Function tools with reasoning_effort are not supported for gpt-6-luna</code> (400)</p>
+<p>The chat agent sends tools even in Lab 1 (<code>get_current_date</code>). For <code>gpt-6-luna</code> on Chat Completions,
+set <code>default_options={"reasoning_effort": "none"}</code> on <code>Agent(...)</code> in <code>create_agent()</code>, not on
+<code>OpenAIChatCompletionClient(...)</code>. See the model/API guard in <a href="#lab1">Lab 1, step 3</a>.
+Updated catch-up solutions include this setting. The Responses API does not need this override.</p>
+</div>
 <div class="admonition troubleshoot">
 <p class="admonition-title"><code>This step needs Lab N …</code></p>
 <p>A later lab's TODO is still open. Complete it, or <code>uv run poe catchup N</code>. Your code is backed up in
