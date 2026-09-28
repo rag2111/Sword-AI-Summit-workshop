@@ -1,4 +1,7 @@
 import json
+import os
+import subprocess
+import sys
 
 import pytest
 
@@ -13,6 +16,7 @@ from care_agent.versions import (
     register_candidate,
     rollback,
 )
+from tests.helpers import ROOT
 
 
 def test_registry_starts_with_builtin_baseline(tmp_path):
@@ -61,3 +65,40 @@ def test_rejected_candidate_and_rollback_without_parent(tmp_path):
 def test_force_promote_for_demos(tmp_path):
     register_candidate("demo", root=tmp_path)
     assert promote("v2", require_validation=False, root=tmp_path)["status"] == "active"
+
+
+@pytest.mark.parametrize("status", ["candidate", "rejected"])
+def test_poe_force_promotion_preserves_evidence_and_can_roll_back(tmp_path, status):
+    register_candidate("demo", root=tmp_path)
+    if status == "rejected":
+        record_eval("v2", eval_run_id="failed-run", overall_score=0.1, trace_ids=["trace"],
+                    passed_gate=False, root=tmp_path)
+    env = {**os.environ, "AGENT_VERSIONS_DIR": str(tmp_path)}
+    before = load_registry(tmp_path)["versions"]["v2"]
+
+    result = subprocess.run(
+        [sys.executable, "-m", "poethepoet", "promote-force", "--version", "v2"],
+        cwd=ROOT, env=env, capture_output=True, text=True, timeout=30,
+    )
+
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "bypasses validation (demo only)" in result.stdout
+    registry = load_registry(tmp_path)
+    assert registry["active"] == "v2"
+    for field in ("eval_run_id", "overall_score", "trace_ids", "instructions_hash", "parent"):
+        assert registry["versions"]["v2"][field] == before[field]
+    assert registry["history"][-1]["action"] == "promote"
+    assert rollback(tmp_path) == ("v2", "v1")
+
+
+@pytest.mark.parametrize("arguments", [[], ["--version", "v999"]])
+def test_poe_force_promotion_requires_existing_explicit_version(tmp_path, arguments):
+    register_candidate("demo", root=tmp_path)
+    before = load_registry(tmp_path)
+    result = subprocess.run(
+        [sys.executable, "-m", "poethepoet", "promote-force", *arguments],
+        cwd=ROOT, env={**os.environ, "AGENT_VERSIONS_DIR": str(tmp_path)},
+        capture_output=True, text=True, timeout=30,
+    )
+    assert result.returncode != 0
+    assert load_registry(tmp_path) == before

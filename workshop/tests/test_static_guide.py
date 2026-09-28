@@ -28,6 +28,21 @@ def test_static_guide_is_current():
     assert OUTPUT.read_text(encoding="utf-8") == build()
 
 
+def test_new_loop_and_promotion_commands_are_in_web_guide():
+    for page in ("lab6", "reference"):
+        text = "".join(Document(render_page(page)).text)
+        for command in (
+            "uv run poe loop --limit 3",
+            "uv run poe loop --limit 3 --offline",
+            "uv run poe promote-force --version v3",
+            "uv run poe promote --version v3 --force",
+        ):
+            assert command in text
+    lab6 = "".join(Document(render_page("lab6")).text)
+    assert "bypasses the validation requirement" in lab6
+    assert "uv run poe loop --limit 3 --judge-delay 10" in lab6
+
+
 def test_every_page_and_lab_is_bundled():
     content = build()
     document = Document(content)

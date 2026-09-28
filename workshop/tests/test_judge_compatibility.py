@@ -48,6 +48,7 @@ def test_sdk_judges_send_compatible_requests(monkeypatch, caplog, model):
     from openai import AsyncAzureOpenAI
 
     requests = []
+    expected_budgets = [800, 3000, 5000, 800, 800, 800, 800]
 
     def respond(request):
         body = json.loads(request.content)
@@ -58,11 +59,14 @@ def test_sdk_judges_send_compatible_requests(monkeypatch, caplog, model):
             assert "Report the retrieved date." in prompt
             assert "Retrieved date: 2026-09-28." in prompt
         if model in {"gpt-6-sol", "gpt-6-luna"}:
-            assert body["max_completion_tokens"] > 0
+            assert body["max_completion_tokens"] == expected_budgets[len(requests) - 1]
+            assert body["reasoning_effort"] == "none"
             assert not {"max_tokens", "temperature", "top_p", "presence_penalty", "frequency_penalty"} & body.keys()
         else:
             assert "temperature" in body
+            assert "reasoning_effort" not in body
             assert ("max_tokens" in body) != ("max_completion_tokens" in body)
+            assert body.get("max_tokens", body.get("max_completion_tokens")) == expected_budgets[len(requests) - 1]
             if len(requests) == 1:
                 assert "max_tokens" in body
         return httpx.Response(200, request=request, json={
@@ -101,7 +105,7 @@ def test_sdk_judges_send_compatible_requests(monkeypatch, caplog, model):
             "tool_definitions": [{"name": "get_current_date", "description": "Get today's date.",
                                   "parameters": {"type": "object", "properties": {}}}],
         },
-        "groundedness": {"query": "What is today's date?", "response": "2026-09-28", "context": "Today is 2026-09-28."},
+        "groundedness": {"response": "2026-09-28", "context": "Today is 2026-09-28."},
         "relevance": {"query": "What is today's date?", "response": "2026-09-28"},
     }
     for name, kwargs in inputs.items():
@@ -109,6 +113,12 @@ def test_sdk_judges_send_compatible_requests(monkeypatch, caplog, model):
         value = judges.call(name, raw, **kwargs)
         assert value is not None, raw
         assert len(requests) == list(inputs).index(name) + 1
+    for _ in range(2):
+        raw = {}
+        assert judges.call(
+            "groundedness", raw, query="What is today's date?", **inputs["groundedness"]
+        ) is not None, raw
+    assert len(requests) == 7
     assert "could not be parsed" not in caplog.text
     asyncio.run(http.aclose())
 
