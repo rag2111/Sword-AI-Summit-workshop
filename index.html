@@ -553,14 +553,22 @@ disclaimer is part of the instructions too.</p>
 <p class="admonition-title">2. Create the chat client</p>
 <p>Open <code>src/care_agent/agent.py</code> and find <code>TODO (Lab 1)</code> in <code>create_chat_client()</code>. Replace the TODO
 block (keep the function signature) with:</p>
-<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">agent_framework.openai</span><span class="w"> </span><span class="kn">import</span> <span class="n">OpenAIChatCompletionClient</span>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">agent_framework.openai</span><span class="w"> </span><span class="kn">import</span> <span class="n">OpenAIChatClient</span><span class="p">,</span> <span class="n">OpenAIChatCompletionClient</span>
 
-<span class="k">return</span> <span class="n">OpenAIChatCompletionClient</span><span class="p">(</span>
-    <span class="n">model</span><span class="o">=</span><span class="n">settings</span><span class="o">.</span><span class="n">chat_model</span><span class="p">,</span>                 <span class="c1"># deployment name behind APIM</span>
-    <span class="n">azure_endpoint</span><span class="o">=</span><span class="n">settings</span><span class="o">.</span><span class="n">openai_endpoint</span><span class="p">,</span>   <span class="c1"># = APIM_BASE_URL; the SDK appends /openai/...</span>
-    <span class="n">api_key</span><span class="o">=</span><span class="n">settings</span><span class="o">.</span><span class="n">subscription_key</span><span class="p">,</span>         <span class="c1"># your APIM key, sent as the `api-key` header</span>
-    <span class="n">api_version</span><span class="o">=</span><span class="n">settings</span><span class="o">.</span><span class="n">openai_api_version</span><span class="p">,</span>
-<span class="p">)</span>
+<span class="c1"># Chat Completions is the most gateway-friendly surface (/openai/deployments/{d}/chat/completions).</span>
+<span class="c1"># Set CHAT_API=responses to try the Responses API instead.</span>
+<span class="n">client_cls</span> <span class="o">=</span> <span class="n">OpenAIChatClient</span> <span class="k">if</span> <span class="n">settings</span><span class="o">.</span><span class="n">chat_api</span> <span class="o">==</span> <span class="s2">"responses"</span> <span class="k">else</span> <span class="n">OpenAIChatCompletionClient</span>
+<span class="n">kwargs</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">"model"</span><span class="p">:</span> <span class="n">settings</span><span class="o">.</span><span class="n">chat_model</span><span class="p">,</span>  <span class="c1"># the deployment name behind APIM</span>
+    <span class="s2">"azure_endpoint"</span><span class="p">:</span> <span class="n">settings</span><span class="o">.</span><span class="n">openai_endpoint</span><span class="p">,</span>  <span class="c1"># = APIM_BASE_URL; the SDK appends /openai/...</span>
+    <span class="s2">"api_key"</span><span class="p">:</span> <span class="n">settings</span><span class="o">.</span><span class="n">subscription_key</span><span class="p">,</span>  <span class="c1"># sent as `api-key`, APIM's subscription key header for /openai</span>
+    <span class="s2">"api_version"</span><span class="p">:</span> <span class="n">settings</span><span class="o">.</span><span class="n">openai_api_version</span><span class="p">,</span>
+<span class="p">}</span>
+<span class="k">try</span><span class="p">:</span>
+    <span class="c1"># Also send Ocp-Apim-Subscription-Key (CONTRACT: every client sends both headers).</span>
+    <span class="k">return</span> <span class="n">client_cls</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">,</span> <span class="n">default_headers</span><span class="o">=</span><span class="n">settings</span><span class="o">.</span><span class="n">apim_headers</span><span class="p">())</span>
+<span class="k">except</span> <span class="ne">TypeError</span><span class="p">:</span>  <span class="c1"># older client signature without default_headers: api-key alone is enough</span>
+    <span class="k">return</span> <span class="n">client_cls</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
 </code></pre></div>
 <p>Notice what is <em>not</em> here: no Azure OpenAI resource name, no Entra token, no model key.</p>
 </div>

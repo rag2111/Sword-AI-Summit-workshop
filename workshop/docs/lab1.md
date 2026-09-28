@@ -36,14 +36,22 @@ The CLI is interactive: enter prompts after `you`, not in the PowerShell or Bash
     block (keep the function signature) with:
 
     ```python
-    from agent_framework.openai import OpenAIChatCompletionClient
+    from agent_framework.openai import OpenAIChatClient, OpenAIChatCompletionClient
 
-    return OpenAIChatCompletionClient(
-        model=settings.chat_model,                 # deployment name behind APIM
-        azure_endpoint=settings.openai_endpoint,   # = APIM_BASE_URL; the SDK appends /openai/...
-        api_key=settings.subscription_key,         # your APIM key, sent as the `api-key` header
-        api_version=settings.openai_api_version,
-    )
+    # Chat Completions is the most gateway-friendly surface (/openai/deployments/{d}/chat/completions).
+    # Set CHAT_API=responses to try the Responses API instead.
+    client_cls = OpenAIChatClient if settings.chat_api == "responses" else OpenAIChatCompletionClient
+    kwargs: dict[str, Any] = {
+        "model": settings.chat_model,  # the deployment name behind APIM
+        "azure_endpoint": settings.openai_endpoint,  # = APIM_BASE_URL; the SDK appends /openai/...
+        "api_key": settings.subscription_key,  # sent as `api-key`, APIM's subscription key header for /openai
+        "api_version": settings.openai_api_version,
+    }
+    try:
+        # Also send Ocp-Apim-Subscription-Key (CONTRACT: every client sends both headers).
+        return client_cls(**kwargs, default_headers=settings.apim_headers())
+    except TypeError:  # older client signature without default_headers: api-key alone is enough
+        return client_cls(**kwargs)
     ```
 
     Notice what is *not* here: no Azure OpenAI resource name, no Entra token, no model key.
