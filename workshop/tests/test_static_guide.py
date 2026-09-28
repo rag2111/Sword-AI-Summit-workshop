@@ -1,7 +1,9 @@
 """The participant deliverable must be complete, portable and reproducible."""
 
 from html.parser import HTMLParser
+import base64
 import re
+import xml.etree.ElementTree as ET
 
 from scripts.build_guide import LABS, OUTPUT, PAGES, ROOT, build, render_page
 from scripts.serve_guide import GUIDE
@@ -42,12 +44,46 @@ def test_static_guide_has_no_runtime_asset_dependencies():
     document = Document(build())
     for tag, attrs in document.tags:
         assert tag not in {"iframe", "object"}
-        if tag in {"script", "img", "link", "source", "video", "audio"}:
+        if tag == "img":
+            assert attrs.get("src", "").startswith("data:image/svg+xml;base64,")
+        elif tag in {"script", "link", "source", "video", "audio"}:
             assert not attrs.get("src")
             assert not attrs.get("href")
     javascript = (ROOT / "scripts" / "guide" / "guide.js").read_text(encoding="utf-8")
     assert not re.search(r"\b(fetch|XMLHttpRequest|WebSocket)\s*\(", javascript)
     assert GUIDE == OUTPUT.parent
+
+
+def test_lab_illustrations_are_distinct_accessible_and_embedded():
+    expected = (
+        ("lab0-smoke-test.svg",),
+        ("lab1-safety-boundaries.svg",),
+        ("lab2-tool-orchestration.svg",),
+        ("lab3-a2a-citations.svg",),
+        ("lab4-local-trace.svg", "lab4-end-to-end-trace.svg"),
+        ("lab5-evaluation-gate.svg", "lab5-run-comparison.svg"),
+        ("lab6-improvement-lineage.svg",),
+    )
+    payloads = []
+    namespace = {"svg": "http://www.w3.org/2000/svg"}
+    for number, names in enumerate(expected):
+        document = Document(render_page(f"lab{number}"))
+        images = [attrs for tag, attrs in document.tags if tag == "img"]
+        assert len(images) == len(names)
+        for attrs, name in zip(images, names, strict=True):
+            assert attrs["alt"].startswith("Illustration:")
+            content = base64.b64decode(attrs["src"].split(",", 1)[1], validate=True)
+            assert content == (ROOT / "docs" / "images" / name).read_text(encoding="utf-8").encode("utf-8")
+            svg = ET.fromstring(content)
+            assert svg.get("viewBox") and svg.get("role") == "img"
+            assert svg.find("svg:title", namespace).text.startswith(f"Lab {number}:")
+            assert svg.find("svg:desc", namespace).text
+            assert "ILLUSTRATION / NOT A" in "".join(svg.itertext())
+            assert svg.find(".//svg:script", namespace) is None
+            payloads.append(content)
+        markdown_source = (ROOT / "docs" / f"lab{number}.md").read_text(encoding="utf-8")
+        assert all(f"](images/{name})" in markdown_source for name in names)
+    assert len(set(payloads)) == 9
 
 
 def test_internal_routes_resolve_and_ids_are_unique():

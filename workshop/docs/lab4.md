@@ -93,6 +93,15 @@ trace 4bf92f3577b34da6a3ce929d0e0e4736
 The IDs and timings above are illustrative. Match your local trace ID to the presenter's operation ID;
 do not assume two similar-looking trees belong to the same request.
 
+![Illustration: a local care_agent.turn contains invoke_agent, chat spans with token usage and three execute_tool spans with durations.](images/lab4-local-trace.svg)
+
+*Illustrative local trace from the example above, not a captured run. Your trace IDs, timings and tokens will differ.*
+
+![Illustration: one operation ID connects the local agent, APIM child spans, the tools backend and the remote knowledge agent.](images/lab4-end-to-end-trace.svg)
+
+*Conceptual Application Insights correlation view, not a portal screenshot. The presenter must verify your actual
+operation ID; this simplified hierarchy is not proof that telemetry was exported.*
+
 !!! checkpoint "Checkpoint"
     `/trace` shows a tree with `invoke_agent`, `chat` and `execute_tool` spans. Stuck? `uv run poe catchup 4`.
 

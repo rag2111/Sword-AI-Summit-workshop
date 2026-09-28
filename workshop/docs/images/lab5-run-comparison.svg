@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1120" height="660" viewBox="0 0 1120 660" role="img" aria-labelledby="title desc">
+  <title id="title">Lab 5: what to inspect when comparing evaluation runs</title>
+  <desc id="desc">Conceptual comparison, not a Foundry screenshot or measured result. Compare two uploaded runs using the same cases, rubric and judge settings. Check overall, safety, task success, hard gates and row-level evidence. Local summary files remain authoritative.</desc>
+  <rect width="1120" height="660" rx="20" fill="#f2f6ef"/>
+  <g font-family="Segoe UI, Arial, sans-serif">
+    <text x="40" y="46" fill="#00695e" font-size="16" font-weight="700">LAB 05 / COMPARE EVALUATION RUNS</text>
+    <rect x="720" y="22" width="360" height="34" rx="17" fill="#dce9de"/>
+    <text x="900" y="45" text-anchor="middle" fill="#23483f" font-size="14">ILLUSTRATION / NOT A PORTAL SCREENSHOT</text>
+    <text x="40" y="104" fill="#152a35" font-size="30" font-weight="700">Compare evidence, not just the headline score.</text>
+    <text x="40" y="142" fill="#53656c" font-size="18">Presenter view: Foundry / Evaluation / care-coordination-&lt;your id&gt;</text>
+    <rect x="40" y="172" width="1040" height="57" rx="8" fill="#142a35"/>
+    <text x="60" y="208" fill="#d5f782" font-family="Consolas, monospace" font-size="19">$ uv run poe upload-evals</text>
+    <rect x="40" y="250" width="1040" height="286" rx="8" fill="#fff" stroke="#bfd1c2"/>
+    <rect x="41" y="251" width="1038" height="55" rx="8" fill="#e3ece0"/>
+    <g fill="#00695e" font-size="18" font-weight="700"><text x="60" y="285">COMPARE</text><text x="475" y="285">RUN A / BASELINE</text><text x="790" y="285">RUN B / CANDIDATE</text></g>
+    <path d="M40 362H1080 M40 418H1080 M40 474H1080 M449 251V535 M764 251V535" stroke="#d4e1d2"/>
+    <g fill="#152a35" font-size="17">
+      <text x="60" y="340">Identity + configuration</text><text x="475" y="340">Record version + run ID</text><text x="790" y="340">Verify comparable inputs</text>
+      <text x="60" y="396">Overall / safety / task success</text><text x="475" y="396">Read baseline metrics</text><text x="790" y="396">Inspect changes, not rank</text>
+      <text x="60" y="452">Hard-gate failures</text><text x="475" y="452">Identify failed case IDs</text><text x="790" y="452">Check every critical case</text>
+      <text x="60" y="508">Row-level evidence</text><text x="475" y="508">Reasons + trace IDs</text><text x="790" y="508">Reasons + trace IDs</text>
+    </g>
+    <text x="40" y="577" fill="#00695e" font-size="18" font-weight="700">Same cases + rubric + judge settings for a meaningful comparison.</text>
+    <text x="40" y="610" fill="#53656c" font-size="17">Your local summary.json is the source of truth, even if the upload is unavailable.</text>
+    <text x="40" y="640" fill="#53656c" font-size="15">Conceptual comparison checklist. No scores or actual portal layout are claimed here.</text>
+  </g>
+</svg>

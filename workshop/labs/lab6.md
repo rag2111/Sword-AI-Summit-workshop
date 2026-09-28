@@ -107,6 +107,10 @@ overall 0.79 → 0.88 (Δ +0.09)
 
 This example shows a successful promotion. Your candidate may be rejected, or the loop may find nothing to fix.
 
+![Illustration: ranked failures lead to a minimal instruction change, validation improves from 0.79 to 0.88, v2 is promoted with lineage, and rollback restores v1.](../docs/images/lab6-improvement-lineage.svg)
+
+*Illustrative successful loop, not a captured run. Candidate versions and scores vary; rejection is also a valid outcome.*
+
 > [!IMPORTANT]
 > **Checkpoint**
 >

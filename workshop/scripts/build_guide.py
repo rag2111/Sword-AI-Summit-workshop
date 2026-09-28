@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import base64
 import html
 import re
 from pathlib import Path
@@ -45,7 +46,6 @@ def flow_diagram(page: str, source: str) -> str:
 
 def render_page(page: str) -> str:
     source = (ROOT / "docs" / f"{page}.md").read_text(encoding="utf-8")
-    source = re.sub(r"^!\[Screenshot placeholder:[^\n]+\n?", "", source, flags=re.M)
     # Preserve the detailed Mermaid source, but render a native offline visual instead of loading a CDN.
     source = re.sub(
         r"(?m)^([ ]*)```mermaid\n(.*?)^\1```",
@@ -60,6 +60,14 @@ def render_page(page: str) -> str:
         extensions=["extra", "admonition", "toc", "pymdownx.superfences", "pymdownx.tabbed", "pymdownx.tasklist"],
         extension_configs={"pymdownx.tabbed": {"alternate_style": True}},
     )
+    # Embed local illustrations so the exported HTML can still be moved and opened on its own.
+    def embed_image(match: re.Match[str]) -> str:
+        name = match[1]
+        image = ROOT / "docs" / "images" / name
+        encoded = base64.b64encode(image.read_text(encoding="utf-8").encode("utf-8")).decode("ascii")
+        return f'src="data:image/svg+xml;base64,{encoded}"'
+
+    rendered = re.sub(r'src="images/([\w-]+\.svg)"', embed_image, rendered)
     # Page-qualified fragments avoid duplicate heading / tab IDs in a single HTML document.
     rendered = re.sub(r'\b(id|for)="([^"]+)"', rf'\1="{page}--\2"', rendered)
     rendered = re.sub(r'\bname="(__tabbed_[^"]+)"', rf'name="{page}--\1"', rendered)

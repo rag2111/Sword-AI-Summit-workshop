@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1120" height="660" viewBox="0 0 1120 660" role="img" aria-labelledby="title desc">
+  <title id="title">Lab 4: end-to-end correlation from laptop through APIM to backends</title>
+  <desc id="desc">Conceptual Application Insights trace view, not a portal screenshot. One operation ID connects the local agent with APIM child spans for MCP and A2A, then the tools backend and knowledge agent. Match this operation to the local trace ID.</desc>
+  <rect width="1120" height="660" rx="20" fill="#f2f6ef"/>
+  <g font-family="Segoe UI, Arial, sans-serif">
+    <text x="40" y="46" fill="#00695e" font-size="16" font-weight="700">LAB 04 / END-TO-END CORRELATION</text>
+    <rect x="720" y="22" width="360" height="34" rx="17" fill="#dce9de"/>
+    <text x="900" y="45" text-anchor="middle" fill="#23483f" font-size="14">ILLUSTRATION / NOT A PORTAL SCREENSHOT</text>
+    <text x="40" y="104" fill="#152a35" font-size="30" font-weight="700">Follow the same operation across boundaries.</text>
+    <text x="40" y="142" fill="#53656c" font-size="18">Presenter view: Application Insights / Transaction search</text>
+    <rect x="40" y="170" width="1040" height="55" rx="8" fill="#142a35"/>
+    <text x="60" y="204" fill="#d5f782" font-family="Consolas, monospace" font-size="18">operation ID = local trace ID / W3C traceparent propagation</text>
+    <path d="M103 282V548 M103 343H165 M177 353V395H224 M103 472H165 M177 482V524H224" fill="none" stroke="#6b9289" stroke-width="3"/>
+    <g fill="#fff" stroke="#bfd1c2"><rect x="60" y="250" width="1000" height="55" rx="8"/><rect x="165" y="318" width="895" height="55" rx="8"/><rect x="225" y="384" width="835" height="55" rx="8"/><rect x="165" y="450" width="895" height="55" rx="8"/><rect x="225" y="516" width="835" height="55" rx="8"/></g>
+    <g fill="#152a35" font-family="Consolas, monospace" font-size="19"><text x="80" y="285">care_agent.turn / invoke_agent</text><text x="185" y="352">APIM /care-tools/mcp</text><text x="245" y="418">care-tools-backend</text><text x="185" y="484">APIM /a2a/care-knowledge</text><text x="245" y="550">care-knowledge-agent</text></g>
+    <g fill="#00695e" font-size="16"><text x="788" y="285">LAPTOP / participant + version</text><text x="788" y="352">GATEWAY / child span</text><text x="788" y="418">BACKEND / synthetic tools</text><text x="788" y="484">GATEWAY / child span</text><text x="788" y="550">FOUNDRY / grounded policy</text></g>
+    <text x="40" y="609" fill="#00695e" font-size="18" font-weight="700">VERIFY: use your real trace ID. Similar-looking trees are not proof of correlation.</text>
+    <text x="40" y="639" fill="#53656c" font-size="15">Simplified hierarchy. Allow 1-3 minutes for ingestion; local spans alone do not prove Azure export.</text>
+  </g>
+</svg>

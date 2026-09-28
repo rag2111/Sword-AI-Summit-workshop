@@ -87,7 +87,7 @@ def test_lab_pages_use_contract_timings_and_structure():
             assert "Screenshot placeholder" not in text
     corpus = " ".join(p.read_text(encoding="utf-8") for p in (ROOT / "docs").glob("*.md")).lower()
     assert "two-hour" not in corpus and "2-hour" not in corpus
-    assert (ROOT / "docs" / "images" / "placeholder.png").exists()
+    assert len(list((ROOT / "docs" / "images").glob("lab*.svg"))) == 9
 
 
 def test_mermaid_diagrams_present():

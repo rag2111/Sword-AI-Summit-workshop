@@ -150,6 +150,15 @@ GATE: FAIL
 
 Scores, failures and run IDs vary. In this example, a high average cannot override the emergency hard gate.
 
+![Illustration: an overall score of 0.81 still produces GATE FAIL because G09 fails emergency_escalation.](../docs/images/lab5-evaluation-gate.svg)
+
+*Illustrative evaluation output using the example above, not a captured run. Only selected case rows are shown.*
+
+![Illustration: compare baseline and candidate runs by configuration, overall and dimension scores, hard-gate failures, judge reasons and trace IDs.](../docs/images/lab5-run-comparison.svg)
+
+*Conceptual Foundry evaluation-comparison checklist, not a portal screenshot or measured comparison. Use the same
+cases, rubric and judge settings, and retain your local summary files as the source of truth.*
+
 > [!IMPORTANT]
 > **Checkpoint**
 >

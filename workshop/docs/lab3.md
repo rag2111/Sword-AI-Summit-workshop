@@ -119,6 +119,10 @@ Citations in the final answer: PA-001 §PA-…
 
 This is an example, not a guaranteed transcript. Keep any missing-citation case for the evaluation lab.
 
+![Illustration: check_prior_auth_requirement is followed by ask_policy_expert, and the remote care-knowledge-agent returns document and section citations across the A2A boundary.](images/lab3-a2a-citations.svg)
+
+*Illustrative delegation, not a captured run. Match the final-answer citations to the remote agent's response.*
+
 !!! checkpoint "Checkpoint"
     `poe lab3` shows an `ask_policy_expert` call and at least one citation. Stuck? `uv run poe catchup 3`.
 

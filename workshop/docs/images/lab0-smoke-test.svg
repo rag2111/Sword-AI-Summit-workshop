@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1120" height="640" viewBox="0 0 1120 640" role="img" aria-labelledby="title desc">
+  <title id="title">Lab 0: five gateway routes pass the smoke test</title>
+  <desc id="desc">Illustrative output, not a captured run. The model, MCP tools, Agent Card, telemetry and Foundry routes all pass using one participant subscription key.</desc>
+  <rect width="1120" height="640" rx="20" fill="#142a35"/>
+  <g font-family="Segoe UI, Arial, sans-serif">
+    <text x="40" y="46" fill="#d5f782" font-size="16" font-weight="700">LAB 00 / CONNECT YOUR WORKSPACE</text>
+    <rect x="770" y="22" width="310" height="34" rx="17" fill="#2b4752"/>
+    <text x="925" y="45" text-anchor="middle" fill="#fff" font-size="14">ILLUSTRATION / NOT A LIVE RUN</text>
+    <text x="40" y="102" fill="#fff" font-size="30" font-weight="700">One key. Five routes. Ready to build.</text>
+    <text x="40" y="138" fill="#b9ccc8" font-size="18">Lakeside Regional Health Network / fictional training environment</text>
+    <rect x="40" y="163" width="1040" height="48" rx="8" fill="#223d48"/>
+    <text x="60" y="194" fill="#d5f782" font-family="Consolas, monospace" font-size="20">$ uv run poe smoke</text>
+    <g font-size="17">
+      <text x="60" y="251" fill="#b9ccc8">GATEWAY ROUTE</text><text x="415" y="251" fill="#b9ccc8">RESULT</text><text x="560" y="251" fill="#b9ccc8">WHAT THIS PROVES</text>
+      <path d="M40 270H1080 M40 323H1080 M40 376H1080 M40 429H1080 M40 482H1080 M40 535H1080" stroke="#35505a"/>
+      <g fill="#fff" font-family="Consolas, monospace" font-size="19">
+        <text x="60" y="304">/openai</text><text x="60" y="357">/care-tools/mcp</text><text x="60" y="410">/a2a/care-knowledge</text><text x="60" y="463">/telemetry</text><text x="60" y="516">/foundry</text>
+      </g>
+      <g fill="#d5f782" font-weight="700"><text x="415" y="304">PASS</text><text x="415" y="357">PASS</text><text x="415" y="410">PASS</text><text x="415" y="463">PASS</text><text x="415" y="516">PASS</text></g>
+      <g fill="#e6eeeb"><text x="560" y="304">The deployed model responds</text><text x="560" y="357">All 7 expected tools are discoverable</text><text x="560" y="410">The knowledge agent publishes its Agent Card</text><text x="560" y="463">Configuration and test-event ingestion work</text><text x="560" y="516">The base agent is readable through APIM</text></g>
+    </g>
+    <rect x="40" y="561" width="1040" height="48" rx="8" fill="#d5f782"/>
+    <text x="60" y="592" fill="#233e2b" font-size="18" font-weight="700">CHECKPOINT: all five routes pass. No Azure credentials on the participant laptop.</text>
+  </g>
+</svg>

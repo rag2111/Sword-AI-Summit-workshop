@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1120" height="660" viewBox="0 0 1120 660" role="img" aria-labelledby="title desc">
+  <title id="title">Lab 2: read the care plan, find a slot, then book a follow-up</title>
+  <desc id="desc">Illustrative tool-call sequence for fictional patient P-1042. get_care_plan, get_current_date, list_available_slots and book_follow_up lead to a synthetic appointment identifier. The date tool may occur at a different point.</desc>
+  <rect width="1120" height="660" rx="20" fill="#142a35"/>
+  <g font-family="Segoe UI, Arial, sans-serif">
+    <text x="40" y="46" fill="#d5f782" font-size="16" font-weight="700">LAB 02 / GIVE YOUR AGENT TOOLS</text>
+    <rect x="770" y="22" width="310" height="34" rx="17" fill="#2b4752"/>
+    <text x="925" y="45" text-anchor="middle" fill="#fff" font-size="14">ILLUSTRATION / NOT A LIVE RUN</text>
+    <text x="40" y="104" fill="#fff" font-size="30" font-weight="700">A booking needs evidence, not just a sentence.</text>
+    <text x="40" y="141" fill="#b9ccc8" font-size="18">Task: discharge P-1042 and book a cardiology follow-up within 7 days.</text>
+    <text x="40" y="181" fill="#d5f782" font-family="Consolas, monospace" font-size="20">$ uv run poe lab2</text>
+    <path d="M69 239V481" stroke="#6b9289" stroke-width="3"/>
+    <g fill="#223d48"><rect x="105" y="213" width="975" height="66" rx="8"/><rect x="105" y="293" width="975" height="66" rx="8"/><rect x="105" y="373" width="975" height="66" rx="8"/><rect x="105" y="453" width="975" height="66" rx="8"/></g>
+    <g fill="#d5f782"><circle cx="69" cy="246" r="20"/><circle cx="69" cy="326" r="20"/><circle cx="69" cy="406" r="20"/><circle cx="69" cy="486" r="20"/></g>
+    <g text-anchor="middle" fill="#233e2b" font-size="18" font-weight="700"><text x="69" y="253">1</text><text x="69" y="333">2</text><text x="69" y="413">3</text><text x="69" y="493">4</text></g>
+    <g fill="#fff" font-family="Consolas, monospace" font-size="20"><text x="126" y="253">get_care_plan</text><text x="126" y="333">get_current_date</text><text x="126" y="413">list_available_slots</text><text x="126" y="493">book_follow_up</text></g>
+    <g fill="#b9ccc8" font-size="18"><text x="440" y="253">patient_id: P-1042 / read the discharge requirements</text><text x="440" y="333">Anchor the follow-up window to the current date</text><text x="440" y="413">specialty: cardiology / within_days: 7</text><text x="440" y="493">patient_id: P-1042 / use a returned slot_id</text></g>
+    <rect x="40" y="545" width="1040" height="74" rx="8" fill="#d5f782"/>
+    <text x="60" y="575" fill="#233e2b" font-size="19" font-weight="700">CHECKPOINT: care plan read + slot found + booking result returned</text>
+    <text x="60" y="603" fill="#233e2b" font-size="17">Look for an appointment_id in your output. IDs vary; never invent one.</text>
+    <text x="40" y="644" fill="#b9ccc8" font-size="15">Synthetic tools only. The date tool may appear at a different point in the sequence.</text>
+  </g>
+</svg>

@@ -92,6 +92,10 @@
 
 The table is illustrative; model names and tool details may differ. The five route results are what matter.
 
+![Illustration: all five APIM routes pass the smoke test using one subscription key. Not a captured run.](../docs/images/lab0-smoke-test.svg)
+
+*Illustrative smoke-test output. Compare each route with your own result; this image is not connectivity evidence.*
+
 ## Troubleshooting
 
 > [!WARNING]

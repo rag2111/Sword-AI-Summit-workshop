@@ -163,8 +163,15 @@ care-coordination-workshop/
     │   └── requirements.txt
     ├── docs/
     │   ├── images/
-    │   │   ├── placeholder.png
-    │   │   └── placeholder.svg
+    │   │   ├── lab0-smoke-test.svg
+    │   │   ├── lab1-safety-boundaries.svg
+    │   │   ├── lab2-tool-orchestration.svg
+    │   │   ├── lab3-a2a-citations.svg
+    │   │   ├── lab4-local-trace.svg
+    │   │   ├── lab4-end-to-end-trace.svg
+    │   │   ├── lab5-evaluation-gate.svg
+    │   │   ├── lab5-run-comparison.svg
+    │   │   └── lab6-improvement-lineage.svg
     │   ├── index.md
     │   ├── javascripts/
     │   │   └── timer.js

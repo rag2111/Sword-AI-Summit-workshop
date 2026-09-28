@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1120" height="700" viewBox="0 0 1120 700" role="img" aria-labelledby="title desc">
+  <title id="title">Lab 6: ranked failures, a validated improvement and reversible promotion</title>
+  <desc id="desc">Illustrative successful loop. An emergency failure ranks first, a minimal instruction change is proposed, validation improves from 0.79 to 0.88 on the same cases, and v2 is promoted with lineage. Rollback restores v1. Rejection is also a valid outcome.</desc>
+  <rect width="1120" height="700" rx="20" fill="#142a35"/>
+  <g font-family="Segoe UI, Arial, sans-serif">
+    <text x="40" y="46" fill="#d5f782" font-size="16" font-weight="700">LAB 06 / CLOSE THE IMPROVEMENT LOOP</text>
+    <rect x="770" y="22" width="310" height="34" rx="17" fill="#2b4752"/>
+    <text x="925" y="45" text-anchor="middle" fill="#fff" font-size="14">ILLUSTRATION / NOT A LIVE RUN</text>
+    <text x="40" y="104" fill="#fff" font-size="30" font-weight="700">A better version, with a way back.</text>
+    <text x="40" y="147" fill="#d5f782" font-family="Consolas, monospace" font-size="20">$ uv run poe loop --quick</text>
+    <rect x="40" y="175" width="1040" height="98" rx="8" fill="#223d48"/>
+    <text x="60" y="207" fill="#9acbd7" font-size="17" font-weight="700">1 / RANK FAILURES BY IMPACT</text>
+    <text x="60" y="239" fill="#fff" font-family="Consolas, monospace" font-size="18">missed_emergency_escalation / impact=25 / G09</text>
+    <text x="60" y="262" fill="#b9ccc8" font-family="Consolas, monospace" font-size="16">ungrounded_policy_answer / impact=6 / G12</text>
+    <rect x="40" y="291" width="1040" height="80" rx="8" fill="#224c47"/>
+    <text x="60" y="321" fill="#d5f782" font-size="17" font-weight="700">2 / PROPOSE A MINIMAL INSTRUCTIONS DIFF</text>
+    <text x="60" y="351" fill="#fff" font-size="18">+ Before any tool call, scan the message for emergency signs...</text>
+    <rect x="40" y="389" width="1040" height="82" rx="8" fill="#223d48"/>
+    <text x="60" y="420" fill="#9acbd7" font-size="17" font-weight="700">3 / VALIDATE ON THE SAME CASES</text>
+    <text x="60" y="452" fill="#fff" font-size="22">Baseline 0.79  →  Candidate 0.88  /  delta +0.09</text>
+    <rect x="40" y="493" width="310" height="80" rx="9" fill="#2b4752"/>
+    <rect x="410" y="493" width="340" height="80" rx="9" fill="#d5f782"/>
+    <rect x="810" y="493" width="270" height="80" rx="9" fill="#2b4752"/>
+    <g text-anchor="middle" font-size="22" font-weight="700"><text x="195" y="527" fill="#fff">v1 / parent</text><text x="580" y="527" fill="#233e2b">v2 / promoted</text><text x="945" y="527" fill="#fff">v1 / restored</text></g>
+    <g text-anchor="middle" font-size="16"><text x="195" y="554" fill="#b9ccc8">baseline re-run</text><text x="580" y="554" fill="#233e2b">eval run + 7 trace IDs</text><text x="945" y="554" fill="#b9ccc8">after rollback</text></g>
+    <g fill="#d5f782" font-size="30"><text x="365" y="540">→</text><text x="765" y="540">→</text></g>
+    <text x="40" y="610" fill="#d5f782" font-family="Consolas, monospace" font-size="20">$ uv run poe rollback</text>
+    <text x="40" y="645" fill="#e2eee7" font-size="18">Promotion requires passing validation and no safety regression. Rejection is valid too.</text>
+    <text x="40" y="677" fill="#b9ccc8" font-size="15">Illustrative successful run. Use your actual candidate version, scores and registry evidence.</text>
+  </g>
+</svg>

@@ -119,6 +119,9 @@ listed with mitigations in `../docs/apim-exceptions/workshop.md`.
 - Run `uv run poe docs-build` to regenerate and commit `guide/index.html`. Markdown rendering uses the
   existing docs dependency group; participants do not need these packages to open the generated file.
   `scripts/guide/` contains the UI assets, which are inlined at build time. No runtime fetches are used.
+  The nine lab-specific SVG illustrations in `docs/images/` are embedded as data URLs, so the HTML
+  remains portable. Each illustration is labeled as an example or conceptual view, not a captured
+  run or portal screenshot. Keep their captions and accessible descriptions when updating the images.
   The optional localhost server serves only `guide/`, not `.env`, code or other workshop files.
 - `python scripts/build_guide.py --check` checks whether the static guide is current.
 - `uv run poe test` checks that the generated trees and static guide are up to date.

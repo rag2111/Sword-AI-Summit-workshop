@@ -112,6 +112,10 @@ Discharge plan for Jordan Ellis (P-1042) — synthetic data …
 
 Tool timings, slot IDs and wording vary. Use the three checks and the returned booking ID as your evidence.
 
+![Illustration: get_care_plan, get_current_date, list_available_slots and book_follow_up form the discharge-planning sequence for fictional patient P-1042.](images/lab2-tool-orchestration.svg)
+
+*Illustrative tool sequence, not a captured run. Verify the real booking result and appointment ID in your output.*
+
 !!! checkpoint "Checkpoint"
     `poe lab2` shows the three ✓ lines and an `appointment_id`. Stuck? `uv run poe catchup 2`.
 

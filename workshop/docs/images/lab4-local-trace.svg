@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1120" height="660" viewBox="0 0 1120 660" role="img" aria-labelledby="title desc">
+  <title id="title">Lab 4: local span tree with model and tool calls</title>
+  <desc id="desc">Illustrative trace 4bf92f3577b34da6a3ce929d0e0e4736. A care_agent.turn lasting 9412.3 milliseconds contains invoke_agent, two chat calls and three tool calls. Model spans include token usage.</desc>
+  <rect width="1120" height="660" rx="20" fill="#142a35"/>
+  <g font-family="Segoe UI, Arial, sans-serif">
+    <text x="40" y="46" fill="#d5f782" font-size="16" font-weight="700">LAB 04 / FOLLOW EVERY REQUEST</text>
+    <rect x="770" y="22" width="310" height="34" rx="17" fill="#2b4752"/>
+    <text x="925" y="45" text-anchor="middle" fill="#fff" font-size="14">ILLUSTRATION / NOT A LIVE RUN</text>
+    <text x="40" y="104" fill="#fff" font-size="30" font-weight="700">One turn, with its model and tool evidence.</text>
+    <text x="40" y="147" fill="#d5f782" font-family="Consolas, monospace" font-size="20">you &gt; /trace</text>
+    <rect x="40" y="173" width="1040" height="48" rx="8" fill="#223d48"/>
+    <text x="60" y="204" fill="#b9ccc8" font-family="Consolas, monospace" font-size="18">trace 4bf92f3577b34da6a3ce929d0e0e4736</text>
+    <path d="M67 265V306H104 M116 311V523 M116 354H158 M116 396H158 M116 438H158 M116 480H158 M116 522H158" fill="none" stroke="#6b9289" stroke-width="2"/>
+    <g fill="#fff" font-family="Consolas, monospace" font-size="19">
+      <text x="60" y="263">care_agent.turn</text><text x="890" y="263">9412.3 ms</text>
+      <text x="112" y="310">invoke_agent care-coordination-agent</text><text x="890" y="310">9398.0 ms</text>
+      <text x="170" y="358" fill="#9acbd7">chat gpt-6-luna</text><text x="890" y="358">1650.2 ms</text>
+      <text x="170" y="400">execute_tool get_care_plan</text><text x="890" y="400">612.4 ms</text>
+      <text x="170" y="442">execute_tool list_available_slots</text><text x="890" y="442">540.9 ms</text>
+      <text x="170" y="484">execute_tool book_follow_up</text><text x="890" y="484">701.3 ms</text>
+      <text x="170" y="526" fill="#9acbd7">chat gpt-6-luna (final answer)</text><text x="890" y="526">2410.8 ms</text>
+    </g>
+    <text x="505" y="358" fill="#9acbd7" font-size="15">1702 input / 58 output tokens</text>
+    <rect x="40" y="559" width="1040" height="55" rx="8" fill="#d5f782"/>
+    <text x="60" y="594" fill="#233e2b" font-size="18" font-weight="700">CHECKPOINT: identify a model span, a tool span, latency and token usage.</text>
+    <text x="40" y="641" fill="#b9ccc8" font-size="15">Example timings and trace ID from the guide. Your run produces its own values.</text>
+  </g>
+</svg>

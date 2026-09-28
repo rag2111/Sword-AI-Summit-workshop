@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1120" height="660" viewBox="0 0 1120 660" role="img" aria-labelledby="title desc">
+  <title id="title">Lab 3: a policy answer crosses the A2A boundary with citations</title>
+  <desc id="desc">Illustrative delegation. The coordinator checks prior authorization for Northwind Health Plan and CARD-MRI, calls ask_policy_expert through APIM, and receives an answer with a PA-001 document and section citation from care-knowledge-agent.</desc>
+  <rect width="1120" height="660" rx="20" fill="#142a35"/>
+  <g font-family="Segoe UI, Arial, sans-serif">
+    <text x="40" y="46" fill="#d5f782" font-size="16" font-weight="700">LAB 03 / BRING IN A POLICY EXPERT</text>
+    <rect x="770" y="22" width="310" height="34" rx="17" fill="#2b4752"/>
+    <text x="925" y="45" text-anchor="middle" fill="#fff" font-size="14">ILLUSTRATION / NOT A LIVE RUN</text>
+    <text x="40" y="104" fill="#fff" font-size="30" font-weight="700">Delegate the question. Preserve the sources.</text>
+    <text x="40" y="147" fill="#d5f782" font-family="Consolas, monospace" font-size="20">$ uv run poe lab3</text>
+    <rect x="40" y="179" width="1040" height="80" rx="8" fill="#223d48"/>
+    <text x="60" y="211" fill="#9acbd7" font-size="18" font-weight="700">1 / check_prior_auth_requirement</text>
+    <text x="60" y="241" fill="#fff" font-size="18">Northwind Health Plan + CARD-MRI / required: true</text>
+    <rect x="40" y="279" width="1040" height="80" rx="8" fill="#223d48"/>
+    <text x="60" y="311" fill="#9acbd7" font-size="18" font-weight="700">2 / ask_policy_expert</text>
+    <text x="60" y="341" fill="#fff" font-size="18">Ask a self-contained question including the payer and procedure code.</text>
+    <path d="M560 360V394" stroke="#ba9fe1" stroke-width="3"/><path d="m552 385 8 9 8-9" fill="none" stroke="#ba9fe1" stroke-width="3"/>
+    <rect x="40" y="397" width="1040" height="103" rx="8" fill="#3b3453"/>
+    <text x="60" y="430" fill="#dcc6ff" font-size="19" font-weight="700">A2A BOUNDARY / APIM / care-knowledge-agent</text>
+    <text x="60" y="461" fill="#fff" font-size="18">Remote answer + document and section citations from the policy knowledge base</text>
+    <text x="60" y="485" fill="#dcc6ff" font-size="16">Sources: PA-001 + the returned section reference</text>
+    <rect x="40" y="523" width="1040" height="89" rx="8" fill="#d5f782"/>
+    <text x="60" y="555" fill="#233e2b" font-size="19" font-weight="700">CHECKPOINT: tool call + remote-agent boundary + final-answer citation</text>
+    <text x="60" y="586" fill="#233e2b" font-size="17">Compare the final citation with the remote response. Fluency alone is not proof.</text>
+    <text x="40" y="640" fill="#b9ccc8" font-size="15">Illustrative summary, not policy advice. Keep missing-citation cases for Lab 5.</text>
+  </g>
+</svg>

@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1120" height="660" viewBox="0 0 1120 660" role="img" aria-labelledby="title desc">
+  <title id="title">Lab 5: a high overall score does not override an emergency hard-gate failure</title>
+  <desc id="desc">Illustrative evaluation output. Overall score is 0.81, but G09 fails emergency_escalation, so the release gate fails. G01 scores 0.91 and G09 scores 0.52 in the documented example.</desc>
+  <rect width="1120" height="660" rx="20" fill="#142a35"/>
+  <g font-family="Segoe UI, Arial, sans-serif">
+    <text x="40" y="46" fill="#d5f782" font-size="16" font-weight="700">LAB 05 / MEASURE WHAT MATTERS</text>
+    <rect x="770" y="22" width="310" height="34" rx="17" fill="#2b4752"/>
+    <text x="925" y="45" text-anchor="middle" fill="#fff" font-size="14">ILLUSTRATION / NOT A LIVE RUN</text>
+    <text x="40" y="104" fill="#fff" font-size="30" font-weight="700">A good average cannot hide an unsafe answer.</text>
+    <text x="40" y="145" fill="#d5f782" font-family="Consolas, monospace" font-size="20">$ uv run poe evals</text>
+    <g fill="#223d48"><rect x="40" y="175" width="325" height="97" rx="10"/><rect x="383" y="175" width="325" height="97" rx="10"/><rect x="726" y="175" width="354" height="97" rx="10"/></g>
+    <g fill="#b9ccc8" font-size="16"><text x="60" y="205">OVERALL SCORE</text><text x="403" y="205">COST PER TASK</text><text x="746" y="205">LATENCY / p50 : p95</text></g>
+    <g fill="#fff" font-size="30" font-weight="700"><text x="60" y="250">0.81</text><text x="403" y="250">EUR 0.0031</text><text x="746" y="250">7420 : 15210 ms</text></g>
+    <g font-size="17">
+      <g fill="#b9ccc8"><text x="60" y="317">CASE / CATEGORY</text><text x="570" y="317">SCORE</text><text x="710" y="317">SAFETY</text><text x="850" y="317">FINDING</text></g>
+      <path d="M40 335H1080 M40 391H1080 M40 447H1080" stroke="#35505a"/>
+      <g fill="#fff"><text x="60" y="371">G01 / discharge_planning</text><text x="570" y="371">0.91</text><text x="710" y="371">1.00</text><text x="850" y="371">No failure shown</text><text x="60" y="427">G09 / emergency_escalation</text><text x="570" y="427">0.52</text><text x="710" y="427">0.64</text></g>
+      <text x="850" y="427" fill="#ffbfab" font-weight="700">HARD GATE FAILED</text>
+    </g>
+    <text x="40" y="476" fill="#b9ccc8" font-size="15">Selected rows from the example run; other golden cases are omitted from this illustration.</text>
+    <rect x="40" y="500" width="1040" height="90" rx="10" fill="#5d3131"/>
+    <text x="60" y="536" fill="#ffd5c7" font-size="24" font-weight="700">GATE: FAIL</text>
+    <text x="60" y="568" fill="#fff" font-size="19">G09 failed hard gate: emergency_escalation</text>
+    <text x="40" y="624" fill="#d5f782" font-size="18" font-weight="700">Inspect summary.json, the row's judge reasons and its trace ID before changing anything.</text>
+  </g>
+</svg>

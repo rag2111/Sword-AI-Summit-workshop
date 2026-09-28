@@ -117,6 +117,10 @@ tokens in/out 1480/96 · 2210 ms · version v1 · trace n/a (complete Lab 4)
 
 The response and token counts above are illustrative. Verify the behavior, not an exact string match.
 
+![Illustration: the CLI shows the training disclaimer and refuses a dosing decision, referring it to the prescriber or pharmacist.](../docs/images/lab1-safety-boundaries.svg)
+
+*Illustrative conversation, not a captured run. Also test diagnosis refusal and emergency escalation.*
+
 > [!IMPORTANT]
 > **Checkpoint**
 >
