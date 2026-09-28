@@ -38,14 +38,7 @@ def get_current_date() -> str:
 def create_chat_client(settings: Settings) -> Any:
     """Chat client that talks to the model deployment through APIM /openai."""
     # TODO (Lab 1): create the chat client.
-    from agent_framework.openai import OpenAIChatCompletionClient
-
-    return OpenAIChatCompletionClient(
-        model=settings.chat_model,                 # deployment name behind APIM
-        azure_endpoint=settings.openai_endpoint,   # = APIM_BASE_URL; the SDK appends /openai/...
-        api_key=settings.subscription_key,         # your APIM key, sent as the `api-key` header
-        api_version=settings.openai_api_version,
-    )
+    
 
     return None
 
@@ -56,22 +49,7 @@ def create_agent(settings: Settings, instructions: str, tools: list[Any]) -> Any
     if chat_client is None:
         raise LabIncomplete(1, "src/care_agent/agent.py → create_chat_client()", "see the commented code")
     # TODO (Lab 1): build the agent.
-    from agent_framework import Agent
-
-    return Agent(
-        client=chat_client,
-        name=AGENT_NAME,
-        description=AGENT_DESCRIPTION,
-        instructions=instructions,
-        tools=tools,              # for now: get_current_date only
-        # This model requires reasoning disabled for Chat Completions function tools.
-        default_options=(
-            {"reasoning_effort": "none"}
-            if settings.chat_api != "responses" and settings.chat_model == "gpt-6-luna"
-            else None
-        ),
-    )
-
+    
 
     raise LabIncomplete(1, "src/care_agent/agent.py → create_agent()", "return Agent(client=..., ...)")
 
