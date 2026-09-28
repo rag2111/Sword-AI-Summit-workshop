@@ -128,16 +128,16 @@ async def build_app() -> Starlette:
     adapter = AgentA2AAdapter(
         AgentState(agent),
         version="1.0.0",
+        name="Care Knowledge Agent",
+        description=(
+            "Policy and protocol Q&A for the fictional Lakeside Regional Health Network, grounded on synthetic "
+            "documents with citations. Training use only; not a medical device; no clinical advice."
+        ),
         capabilities=AgentCapabilities(streaming=False),
         supported_interfaces=[AgentInterface(url=PUBLIC_A2A_URL, protocol_binding="JSONRPC")],
         skills=SKILLS,
     )
     card = await adapter.get_card()
-    card.name = "Care Knowledge Agent"
-    card.description = (
-        "Policy and protocol Q&A for the fictional Lakeside Regional Health Network, grounded on synthetic "
-        "documents with citations. Training use only; not a medical device; no clinical advice."
-    )
     handler = DefaultRequestHandler(agent_executor=FoundryAgentExecutor(adapter), task_store=InMemoryTaskStore(),
                                     agent_card=card)
     routes = [Route("/healthz", healthz), *create_agent_card_routes(card), *create_jsonrpc_routes(handler, "/")]

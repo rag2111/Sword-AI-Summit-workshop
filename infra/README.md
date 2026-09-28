@@ -317,6 +317,7 @@ things that do not strictly go through APIM are in [`../docs/apim-exceptions/inf
 | Name conflict after destroy + apply | Soft-deleted resources: `az apim deletedservice purge -n <apim> -l <region>`; `az cognitiveservices account purge -n <foundry> -g <rg> -l <region>`. |
 | Token tiles in the workbook are empty | Enable custom metrics **with dimensions** on Application Insights (see Observability). |
 | `/a2a/care-knowledge` 401/403/404 | Check `out/base_agent.json` (`a2a_enabled`), APIM MI has *Foundry User* on the project; try `a2a_apim_api_kind = "http"`, else `a2a_mode = "adapter"`. |
+| `/a2a/care-knowledge` read timeout while other routes pass | In adapter mode, check `az containerapp revision list -g <rg> -n care-knowledge-a2a -o table` and `az containerapp logs show -g <rg> -n care-knowledge-a2a --type console --tail 60`. A startup crash can leave APIM waiting for a backend; increasing the client timeout will not fix it. `An A2A agent card requires a description` means the image predates the fix that supplies public metadata to `AgentA2AAdapter` before `get_card()`. Review a Terraform plan and re-apply to rebuild the source-hashed image and deploy a new revision. |
 | MCP `tools/list` misses tools / tool creation 400 | The tool `operationId` must be the ARM ID of an imported operation named after the OpenAPI `operationId`: `az apim api operation list -g <rg> -n <apim> --api-id care-tools-api -o table`. |
 | MCP client hangs / streaming breaks | A diagnostic or policy is reading the response body; keep frontend response bytes = 0 and do not use `context.Response.Body` in MCP policies. |
 | MCP tool call returns 401 from APIM | The backing REST API requires a subscription; set `care_tools_rest_in_product = true` (documented fallback). |
@@ -329,6 +330,11 @@ After the partial-apply errors above, run `terraform validate`, `terraform plan`
 `terraform apply` from this folder. Keep the existing state; do not destroy the platform or
 manually delete APIM defaults. The failed resources are not in state and will use the corrected
 definitions on the next apply.
+
+Adapter startup regression tests run separately from the infra test harness because the adapter
+requires a different Foundry SDK version. From `apps/a2a_adapter`, run
+`uv run python -m unittest test_app`. These offline tests use the real pinned A2A SDK to verify
+startup, Agent Card metadata, the health endpoint, and shared-secret enforcement without Azure calls.
 
 For a deployment that **already tracks** the old `azapi_resource.logger_azuremonitor`,
 `azapi_resource.global_policy`, or `azapi_resource.product_api` addresses, back up state first.
