@@ -30,6 +30,7 @@ from care_agent.config import ConfigError, Settings, get_settings
 from care_agent.errors import explain
 from evals.cost import run_cost
 from evals.evaluators.no_clinical_diagnosis import NoClinicalDiagnosisEvaluator, emergency_escalation_check
+from evals.judge import is_reasoning_model
 from evals.latency import latency_summary
 from evals.runs import OUT_DIR
 from evals.scoring import (
@@ -175,8 +176,9 @@ class Judges:
 
     SAFETY_KEYS = ("violence", "self_harm", "sexual", "hate_unfairness")
 
-    def __init__(self, settings: Settings, *, use_judge: bool) -> None:
+    def __init__(self, settings: Settings, *, use_judge: bool, instructions: str | None = None) -> None:
         self.settings = settings
+        self.instructions = instructions
         self.notes: list[str] = []
         self.llm: dict[str, Any] = {}
         self.content_safety: Any = None
@@ -201,12 +203,13 @@ class Judges:
                 azure_deployment=settings.judge_model,
                 api_version=settings.openai_api_version,
             )
+            reasoning_model = is_reasoning_model(settings.judge_model)
             self.llm = {
-                "intent_resolution": IntentResolutionEvaluator(model_config=model_config),
-                "task_adherence": TaskAdherenceEvaluator(model_config=model_config),
-                "tool_call_accuracy": ToolCallAccuracyEvaluator(model_config=model_config),
-                "groundedness": GroundednessEvaluator(model_config=model_config),
-                "relevance": RelevanceEvaluator(model_config=model_config),
+                "intent_resolution": IntentResolutionEvaluator(model_config=model_config, is_reasoning_model=reasoning_model),
+                "task_adherence": TaskAdherenceEvaluator(model_config=model_config, is_reasoning_model=reasoning_model),
+                "tool_call_accuracy": ToolCallAccuracyEvaluator(model_config=model_config, is_reasoning_model=reasoning_model),
+                "groundedness": GroundednessEvaluator(model_config=model_config, is_reasoning_model=reasoning_model),
+                "relevance": RelevanceEvaluator(model_config=model_config, is_reasoning_model=reasoning_model),
             }
         except Exception as exc:  # noqa: BLE001
             self.notes.append(f"azure-ai-evaluation judges unavailable ({type(exc).__name__}: {exc}); deterministic metrics only.")
@@ -288,14 +291,32 @@ def score_row(row: dict[str, Any], judges: Judges, definitions: list[dict[str, A
     if row.get("error"):
         metrics.update(intent_resolution=0.0, task_adherence=0.0, tool_call_accuracy=0.0)
     else:
-        metrics["intent_resolution"] = judges.call("intent_resolution", raw, query=query, response=response)
-        metrics["task_adherence"] = judges.call("task_adherence", raw, query=query, response=response)
+        eval_calls = [
+            {"type": "tool_call", "tool_call_id": c.get("call_id") or f"call_{i}", "name": short_name(c["name"]),
+             "arguments": c["arguments"] if isinstance(c.get("arguments"), dict) else {}}
+            for i, c in enumerate(calls)
+        ]
+        judge_query: list[dict[str, Any]] = [{"role": "user", "content": [{"type": "text", "text": query}]}]
+        if judges.instructions:
+            judge_query.insert(0, {"role": "system", "content": judges.instructions})
+        judge_response = []
+        for call, recorded in zip(eval_calls, calls):
+            judge_response.append({"role": "assistant", "content": [call]})
+            # Match observed evidence by ID; do not infer results for calls without one.
+            for result in row.get("tool_results") or []:
+                if recorded.get("call_id") and result.get("call_id") == recorded["call_id"]:
+                    judge_response.append({
+                        "role": "tool", "tool_call_id": call["tool_call_id"],
+                        "content": [{"type": "tool_result", "tool_result": result["result"]}],
+                    })
+        judge_response.append({"role": "assistant", "content": [{"type": "text", "text": response}]})
+        metrics["intent_resolution"] = judges.call(
+            "intent_resolution", raw, query=judge_query, response=judge_response, tool_definitions=definitions
+        )
+        metrics["task_adherence"] = judges.call(
+            "task_adherence", raw, query=judge_query, response=judge_response, tool_definitions=definitions
+        )
         if row["expected_tool_calls"] and calls:
-            eval_calls = [
-                {"type": "tool_call", "tool_call_id": c.get("call_id") or f"call_{i}", "name": short_name(c["name"]),
-                 "arguments": c["arguments"] if isinstance(c.get("arguments"), dict) else {}}
-                for i, c in enumerate(calls)
-            ]
             metrics["tool_call_accuracy"] = judges.call(
                 "tool_call_accuracy", raw, query=query, tool_calls=eval_calls, tool_definitions=definitions
             )
@@ -332,8 +353,11 @@ def score_row(row: dict[str, Any], judges: Judges, definitions: list[dict[str, A
     }
 
 
-async def score_rows(rows: list[dict[str, Any]], judges: Judges, definitions: list[dict[str, Any]], rubric: dict[str, Any]) -> list[dict[str, Any]]:
-    semaphore = asyncio.Semaphore(4)  # evaluators are sync HTTP calls: run a few in threads
+async def score_rows(
+    rows: list[dict[str, Any]], judges: Judges, definitions: list[dict[str, Any]], rubric: dict[str, Any],
+    *, concurrency: int = 1,
+) -> list[dict[str, Any]]:
+    semaphore = asyncio.Semaphore(max(1, concurrency))
 
     async def one(row: dict[str, Any]) -> dict[str, Any]:
         async with semaphore:
@@ -439,12 +463,16 @@ async def run_evaluation(
     dataset: str = "golden.jsonl",
 ) -> tuple[Path, dict[str, Any], list[dict[str, Any]]]:
     """Programmatic entry point (used by poe evals, poe redteam and the Lab 6 loop)."""
+    if instructions is None:
+        from care_agent.instructions import load_active_instructions
+
+        _, instructions = load_active_instructions()
     run_id = f"{datetime.now():%Y%m%d-%H%M%S}-{version}" + (f"-{label}" if label else "")
     rows, definitions, ihash = await collect_responses(
         settings, cases, version=version, instructions=instructions, run_id=run_id, concurrency=concurrency
     )
-    judges = Judges(settings, use_judge=use_judge)
-    scored = await score_rows(rows, judges, definitions, rubric)
+    judges = Judges(settings, use_judge=use_judge, instructions=instructions)
+    scored = await score_rows(rows, judges, definitions, rubric, concurrency=concurrency)
     summary = summarize(scored, rubric, settings, run_id=run_id, version=version, instructions_hash=ihash,
                         dataset=dataset, notes=judges.notes)
     out_dir = out_root / run_id
@@ -486,7 +514,8 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
     parser.add_argument("--limit", type=int)
     parser.add_argument("--candidate", help="evaluate a registered candidate version (Lab 6), e.g. v2")
     parser.add_argument("--no-judge", action="store_true", help="skip LLM judges (offline scoring only)")
-    parser.add_argument("--concurrency", type=int, default=1)
+    parser.add_argument("--concurrency", type=int, default=1,
+                        help="concurrent cases in each phase (agent and judging); default 1 to reduce throttling")
     parser.add_argument("--fail-on-gate", action="store_true", help="exit 1 if the gate fails (CI)")
     parser.add_argument("--rescore", metavar="RUN_ID", nargs="?", const="latest",
                         help="re-apply the current rubric to a stored run (no model calls)")

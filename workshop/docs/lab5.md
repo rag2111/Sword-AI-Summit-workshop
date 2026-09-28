@@ -52,7 +52,7 @@ weights so you can restore them before Lab 6. Model calls and evaluation judges 
     ```bash
     uv run poe evals
     ```
-    About 3–5 minutes. While it runs, open `evals/evaluators/no_clinical_diagnosis.py`: an LLM-judge prompt
+    Allow several minutes, longer if the token budget is exhausted. While it runs, open `evals/evaluators/no_clinical_diagnosis.py`: an LLM-judge prompt
     with a regex fallback.
 
 !!! dothis "4. Read your results"
@@ -146,9 +146,26 @@ cases, rubric and judge settings, and retain your local summary files as the sou
 
 ## Troubleshooting
 
+!!! troubleshoot "400: `max_tokens` is not supported"
+    The workshop's `gpt-6-sol` judge (and `gpt-6-luna` override) requires `max_completion_tokens`.
+    The runner enables the SDK's `is_reasoning_model` option for these deployments, which also removes
+    unsupported sampling parameters. The shared custom-judge helper uses `max_completion_tokens` and
+    `reasoning_effort: none`, so short JSON verdicts do not spend their output budget on hidden reasoning.
+    After updating the workshop code, verify with `uv run poe evals --ids G10` (diagnosis refusal).
+    `--rescore` only recomputes rubric scores from saved metrics; it does not retry failed judges.
+    Re-running G01/G03 can create additional synthetic bookings or referrals.
+
 !!! troubleshoot "429 during evals"
-    Judges and the agent share your token budget. Use `--ids` for a subset, or `--no-judge` for deterministic
-    metrics only. The code retries using APIM's `Retry-After`.
+    Judges and the agent share your token budget. `--concurrency 1` (the default) now applies to both
+    agent collection and judging; increasing it can cause competing retries. Stop other runs using
+    the same participant key while evaluating. Use `--ids` for a subset, or `--no-judge` for deterministic
+    metrics only.
+
+    A `RateLimitError` traceback followed by **"Retrying in … seconds"** is an SDK retry warning, not
+    necessarily a failed run. The SDK honors APIM's `Retry-After`; another caller can consume the
+    budget before its retry succeeds. The custom judge and agent/A2A retry helpers also wait the
+    full server-specified delay, even above 30 seconds. Retries remain bounded; persistent throttling
+    can still exhaust them. Check saved judge errors and summary notes before trusting the scores.
 
 !!! troubleshoot "`builtin_safety` shows `llm-fallback`"
     The Foundry safety evaluators (preview) were not reachable through `/foundry`; an LLM judge scored harmful

@@ -1157,7 +1157,7 @@ command malfunction.</p>
 <p class="admonition-title">3. Full run</p>
 <p><div class="highlight"><pre><span></span><code>uv<span class="w"> </span>run<span class="w"> </span>poe<span class="w"> </span>evals
 </code></pre></div>
-About 3–5 minutes. While it runs, open <code>evals/evaluators/no_clinical_diagnosis.py</code>: an LLM-judge prompt
+Allow several minutes, longer if the token budget is exhausted. While it runs, open <code>evals/evaluators/no_clinical_diagnosis.py</code>: an LLM-judge prompt
 with a regex fallback.</p>
 </div>
 <div class="admonition dothis">
@@ -1278,9 +1278,26 @@ checkpoint label.)</p>
 </div>
 <h2 id="lab5--troubleshooting">Troubleshooting</h2>
 <div class="admonition troubleshoot">
+<p class="admonition-title">400: <code>max_tokens</code> is not supported</p>
+<p>The workshop's <code>gpt-6-sol</code> judge (and <code>gpt-6-luna</code> override) requires <code>max_completion_tokens</code>.
+The runner enables the SDK's <code>is_reasoning_model</code> option for these deployments, which also removes
+unsupported sampling parameters. The shared custom-judge helper uses <code>max_completion_tokens</code> and
+<code>reasoning_effort: none</code>, so short JSON verdicts do not spend their output budget on hidden reasoning.
+After updating the workshop code, verify with <code>uv run poe evals --ids G10</code> (diagnosis refusal).
+<code>--rescore</code> only recomputes rubric scores from saved metrics; it does not retry failed judges.
+Re-running G01/G03 can create additional synthetic bookings or referrals.</p>
+</div>
+<div class="admonition troubleshoot">
 <p class="admonition-title">429 during evals</p>
-<p>Judges and the agent share your token budget. Use <code>--ids</code> for a subset, or <code>--no-judge</code> for deterministic
-metrics only. The code retries using APIM's <code>Retry-After</code>.</p>
+<p>Judges and the agent share your token budget. <code>--concurrency 1</code> (the default) now applies to both
+agent collection and judging; increasing it can cause competing retries. Stop other runs using
+the same participant key while evaluating. Use <code>--ids</code> for a subset, or <code>--no-judge</code> for deterministic
+metrics only.</p>
+<p>A <code>RateLimitError</code> traceback followed by <strong>"Retrying in … seconds"</strong> is an SDK retry warning, not
+necessarily a failed run. The SDK honors APIM's <code>Retry-After</code>; another caller can consume the
+budget before its retry succeeds. The custom judge and agent/A2A retry helpers also wait the
+full server-specified delay, even above 30 seconds. Retries remain bounded; persistent throttling
+can still exhaust them. Check saved judge errors and summary notes before trusting the scores.</p>
 </div>
 <div class="admonition troubleshoot">
 <p class="admonition-title"><code>builtin_safety</code> shows <code>llm-fallback</code></p>

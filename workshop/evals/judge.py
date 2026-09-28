@@ -19,6 +19,11 @@ class JudgeError(RuntimeError):
     pass
 
 
+def is_reasoning_model(model: str) -> bool:
+    """Recognize the workshop's reasoning-model deployment names."""
+    return model in {"gpt-6-sol", "gpt-6-luna"}
+
+
 def extract_json(text: str) -> Any:
     """Parse JSON from a model answer, tolerating ```json fences or leading prose."""
     text = (text or "").strip()
@@ -53,7 +58,7 @@ def _post_with_retry(settings: Settings, url: str, body: dict[str, Any], timeout
             status, retry_after = http_status_of(exc)
             if status not in (429, 500, 502, 503, 504) or attempt == attempts:
                 raise
-            time.sleep(min(30.0, retry_after or 5.0 * attempt))
+            time.sleep(retry_after if retry_after is not None else min(30.0, 5.0 * attempt))
         except httpx.TransportError as exc:
             last_error = exc
             if attempt == attempts:
@@ -82,9 +87,12 @@ def chat(
     )
     body: dict[str, Any] = {
         "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}],
-        "temperature": temperature,
-        "max_tokens": max_tokens,
     }
+    if is_reasoning_model(model):
+        # Keep small JSON verdict budgets for output rather than hidden reasoning.
+        body.update(max_completion_tokens=max_tokens, reasoning_effort="none")
+    else:
+        body.update(max_tokens=max_tokens, temperature=temperature)
     if json_mode:
         body["response_format"] = {"type": "json_object"}
     data = _post_with_retry(settings, url, body, timeout, attempts)

@@ -8,6 +8,7 @@ or a network problem. `explain()` turns those into one actionable sentence.
 from __future__ import annotations
 
 import asyncio
+import math
 import random
 from collections.abc import Awaitable, Callable
 from typing import Any, TypeVar
@@ -51,16 +52,16 @@ def _iter_causes(exc: BaseException, max_depth: int = 8):
 def _retry_after_from_headers(headers: Any) -> float | None:
     if not headers:
         return None
-    try:
-        for name in ("retry-after-ms", "x-ms-retry-after-ms"):
-            value = headers.get(name)
-            if value:
-                return float(value) / 1000.0
-        value = headers.get("retry-after")
-        if value:
-            return float(value)
-    except (TypeError, ValueError):
-        return None
+    for name, scale in (("retry-after-ms", 1000.0), ("x-ms-retry-after-ms", 1000.0), ("retry-after", 1.0)):
+        value = headers.get(name)
+        if value is None:
+            continue
+        try:
+            seconds = float(value) / scale
+        except (TypeError, ValueError):
+            continue
+        if math.isfinite(seconds) and seconds >= 0:
+            return seconds
     return None
 
 
@@ -133,7 +134,7 @@ async def retry_async(
     max_wait: float = 30.0,
     on_retry: Callable[[int, float, BaseException], None] | None = None,
 ) -> T:
-    """Retry an async call on 429/5xx, honouring Retry-After from APIM's token-limit policy."""
+    """Retry 429/5xx; max_wait caps fallback backoff, never the server's Retry-After."""
     for attempt in range(1, attempts + 1):
         try:
             return await fn()
@@ -141,7 +142,8 @@ async def retry_async(
             if attempt == attempts or not is_retryable(exc):
                 raise
             _, retry_after = http_status_of(exc)
-            wait = min(max_wait, retry_after or default_wait * attempt) + random.uniform(0, 0.5)
+            wait = retry_after if retry_after is not None else min(max_wait, default_wait * attempt)
+            wait += random.uniform(0, 0.5)
             if on_retry:
                 on_retry(attempt, wait, exc)
             await asyncio.sleep(wait)
