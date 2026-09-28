@@ -108,6 +108,8 @@ resource "azapi_resource" "care_tools_api" {
       # Import the committed OpenAPI spec; APIM names each operation after its operationId.
       format = "openapi+json"
       value  = file(var.care_tools_openapi_path)
+      # MCP must append required and optional query arguments together, not to a query-bearing template.
+      translateRequiredQueryParameters = "query"
     }
   }
   # format/value are import-only inputs and are not returned by GET.

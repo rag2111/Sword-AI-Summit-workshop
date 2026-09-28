@@ -69,6 +69,7 @@ all of them explicitly.
 | Package | Version | Notes |
 |---|---|---|
 | agent-framework-core | 1.19.0 | GA |
+| mcp | 1.30.0 | required for Lab 2 `MCPStreamableHTTPTool`; installed by default |
 | agent-framework-openai | 1.14.4 | `OpenAIChatClient` / `OpenAIChatCompletionClient` |
 | agent-framework-a2a | 1.0.0b260918 | pre-release (exact pin) |
 | agent-framework-devui | 1.0.0b260918 | optional extra `devui`, pre-release |

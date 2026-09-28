@@ -89,6 +89,10 @@ run "binds_default_routes" {
     condition     = alltrue([for binding in azurerm_api_management_product_api.product_api : binding.product_id == "workshop-participants" && binding.api_management_name == "apim-test" && binding.resource_group_name == "rg-test"])
     error_message = "AzureRM needs the product name, APIM name and resource group, not the product ARM ID."
   }
+  assert {
+    condition     = azapi_resource.care_tools_api.body.properties.translateRequiredQueryParameters == "query"
+    error_message = "Keep required query parameters out of URL templates so MCP combines them with optional query arguments correctly."
+  }
 }
 
 run "binds_optional_rest_and_http_a2a" {

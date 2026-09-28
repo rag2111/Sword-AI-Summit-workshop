@@ -206,7 +206,8 @@ uv run scripts/smoke_test.py --env out/participants/<name>.env
 ```
 
 Checks, with one participant key only: model call (`/openai/deployments/*` and `/openai/v1/*`), MCP
-`initialize` + `tools/list` (7 tools) + one `tools/call`, A2A agent card + `message/send`
+`initialize` + `tools/list` (7 tools) + read-only `search_patient` and `list_available_slots` calls
+(including required and optional query arguments), A2A agent card + `message/send`
 (`SendMessage` for A2A 1.0), `GET /telemetry/config` + a test envelope to `/telemetry/v2.1/track`,
 Foundry list agents via `/foundry`, and that a forbidden Foundry call (DELETE of the base agent) gets
 403. Prints a PASS/FAIL table; the trace ID printed at the top can be searched in Application Insights.
@@ -320,6 +321,7 @@ things that do not strictly go through APIM are in [`../docs/apim-exceptions/inf
 | `/a2a/care-knowledge` read timeout while other routes pass | In adapter mode, check `az containerapp revision list -g <rg> -n care-knowledge-a2a -o table` and `az containerapp logs show -g <rg> -n care-knowledge-a2a --type console --tail 60`. A startup crash can leave APIM waiting for a backend; increasing the client timeout will not fix it. `An A2A agent card requires a description` means the image predates the fix that supplies public metadata to `AgentA2AAdapter` before `get_card()`. Review a Terraform plan and re-apply to rebuild the source-hashed image and deploy a new revision. |
 | MCP `tools/list` misses tools / tool creation 400 | The tool `operationId` must be the ARM ID of an imported operation named after the OpenAPI `operationId`: `az apim api operation list -g <rg> -n <apim> --api-id care-tools-api -o table`. |
 | MCP client hangs / streaming breaks | A diagnostic or policy is reading the response body; keep frontend response bytes = 0 and do not use `context.Response.Body` in MCP policies. |
+| Lab 2 reads the care plan but cannot book; slot search reports `cardiology?within_days=7` | The backing REST import promoted required query arguments into URL templates, and MCP appended optional arguments with a second `?`. Keep `translateRequiredQueryParameters = "query"` on the REST API import and re-apply the reviewed Terraform plan. The slot operation should use `/slots`, with both arguments in `request.queryParameters`. The infra MCP smoke check now validates the slot-search result even when MCP returns HTTP 200 around a backend validation error. |
 | MCP tool call returns 401 from APIM | The backing REST API requires a subscription; set `care_tools_rest_in_product = true` (documented fallback). |
 | `/foundry` returns 403 `WorkshopAllowlist` | The operation is not allowlisted; extend the allowlist in `modules/apim_apis/policies/foundry.xml`. |
 | Knowledge base was not created (`out/knowledge.json` `mode: index`) | The agent automatically uses the Azure AI Search tool on `care-docs`; set `knowledge_mode = "kb"` to make KB failures fatal and see the error. |

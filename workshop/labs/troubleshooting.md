@@ -62,6 +62,15 @@ Start with `uv run poe smoke`: it tests all five routes and prints a one-line ex
 > (`static_headers=settings.apim_headers()`).
 
 > [!WARNING]
+> **`No module named 'mcp'`**
+>
+> This is a missing local Python dependency, not an APIM key or URL issue. The workshop now pins
+> `mcp` as a default dependency because `agent-framework-core` does not install it by default.
+> From `workshop/`, run `uv sync --locked --inexact`, then `uv run poe mcp-tools`.
+> `--inexact` preserves already-installed optional packages such as DevUI. Do not change `.env`
+> or install an untracked package with `pip`.
+
+> [!WARNING]
 > **DevUI not installed**
 >
 > `uv sync --extra devui` (preview package) — or use `uv run poe chat`.

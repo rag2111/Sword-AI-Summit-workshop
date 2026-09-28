@@ -46,6 +46,15 @@ def test_poe_tasks_implement_the_command_contract():
             assert path.exists(), f"poe {name} → {path}"
 
 
+def test_mcp_is_a_default_runtime_dependency():
+    assert "mcp==1.30.0" in _pyproject()["project"]["dependencies"]
+    from mcp import ClientSession
+    from mcp.client.streamable_http import streamablehttp_client
+
+    assert callable(ClientSession)
+    assert callable(streamablehttp_client)
+
+
 def test_python_version_and_uv_groups():
     assert (ROOT / ".python-version").read_text().strip() == "3.12"
     assert set(_pyproject()["tool"]["uv"]["default-groups"]) == {"dev", "docs"}

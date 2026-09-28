@@ -1572,6 +1572,14 @@ Updated catch-up solutions include this setting. The Responses API does not need
 (<code>static_headers=settings.apim_headers()</code>).</p>
 </div>
 <div class="admonition troubleshoot">
+<p class="admonition-title"><code>No module named 'mcp'</code></p>
+<p>This is a missing local Python dependency, not an APIM key or URL issue. The workshop now pins
+<code>mcp</code> as a default dependency because <code>agent-framework-core</code> does not install it by default.
+From <code>workshop/</code>, run <code>uv sync --locked --inexact</code>, then <code>uv run poe mcp-tools</code>.
+<code>--inexact</code> preserves already-installed optional packages such as DevUI. Do not change <code>.env</code>
+or install an untracked package with <code>pip</code>.</p>
+</div>
+<div class="admonition troubleshoot">
 <p class="admonition-title">DevUI not installed</p>
 <p><code>uv sync --extra devui</code> (preview package) — or use <code>uv run poe chat</code>.</p>
 </div>
@@ -1845,6 +1853,11 @@ all of them explicitly.</p>
 <td>agent-framework-core</td>
 <td>1.19.0</td>
 <td>GA</td>
+</tr>
+<tr>
+<td>mcp</td>
+<td>1.30.0</td>
+<td>required for Lab 2 <code>MCPStreamableHTTPTool</code>; installed by default</td>
 </tr>
 <tr>
 <td>agent-framework-openai</td>

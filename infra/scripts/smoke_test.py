@@ -103,7 +103,25 @@ class Smoke:
         r, body = self._mcp({"jsonrpc": "2.0", "id": 3, "method": "tools/call",
                              "params": {"name": "search_patient", "arguments": {"query": "Ellis"}}}, session)
         found = "P-1042" in json.dumps(body or {})
-        return found, f"7 tools listed; search_patient('Ellis') {'found P-1042' if found else 'did NOT find P-1042'}"
+        if not found:
+            return False, "search_patient('Ellis') did NOT find P-1042"
+        r, body = self._mcp({"jsonrpc": "2.0", "id": 4, "method": "tools/call",
+                            "params": {"name": "list_available_slots",
+                                       "arguments": {"specialty": "cardiology", "within_days": 7}}}, session)
+        result = (body or {}).get("result", {})
+        if r.status_code != 200 or "error" in (body or {}) or result.get("isError"):
+            return False, f"list_available_slots failed: HTTP {r.status_code} {json.dumps(body)[:200]}"
+        text = "".join(part.get("text", "") for part in result.get("content", []) if part.get("type") == "text")
+        try:
+            slots = json.loads(text)
+        except json.JSONDecodeError:
+            return False, f"list_available_slots returned invalid JSON: {text[:200]}"
+        if not isinstance(slots, list) or not all(
+            isinstance(slot, dict) and slot.get("slot_id") and slot.get("specialty") == "cardiology"
+            for slot in slots
+        ):
+            return False, f"list_available_slots returned an unexpected result: {text[:200]}"
+        return True, f"7 tools listed; search_patient found P-1042; slot search OK ({len(slots)} cardiology slots)"
 
     # ---- /a2a/care-knowledge ---------------------------------------------------------------
     def a2a_card(self):
