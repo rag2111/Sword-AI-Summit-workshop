@@ -56,7 +56,7 @@ from azure.ai.projects.models import (
     Reasoning,
     ResponsesProtocolConfiguration,
 )
-from azure.core.exceptions import ResourceNotFoundError
+from azure.core.exceptions import HttpResponseError, ResourceNotFoundError
 from azure.identity import DefaultAzureCredential
 
 INFRA_DIR = Path(__file__).resolve().parents[1]
@@ -66,6 +66,8 @@ OUT_FILE = INFRA_DIR / "out" / "base_agent.json"
 AGENT_NAME = "care-knowledge-agent"
 KB_CONNECTION = "care-kb-mcp"
 ARM_CONNECTION_API = "2025-10-01-preview"   # PREVIEW: RemoteTool + ProjectManagedIdentity connection
+AGENT_GET_ATTEMPTS = 4
+AGENT_GET_RETRY_DELAY = 5.0
 
 DISCLAIMER = (
     "Training use only. This workshop uses synthetic, fictional data. The Care Coordination Agent is not a "
@@ -143,10 +145,34 @@ def definition_for(model: str, tool, *, model_route: str) -> tuple[PromptAgentDe
 
 
 def version_is_latest(project: AIProjectClient, version: str) -> bool:
-    try:
-        return str(project.agents.get(agent_name=AGENT_NAME).versions.latest.version) == version
-    except ResourceNotFoundError:
-        return False
+    for attempt in range(1, AGENT_GET_ATTEMPTS + 1):
+        try:
+            return str(project.agents.get(agent_name=AGENT_NAME).versions.latest.version) == version
+        except ResourceNotFoundError:
+            return False
+        except HttpResponseError as exc:
+            error_code = getattr(getattr(exc, "error", None), "code", None)
+            retryable = exc.status_code in (408, 429, 500, 502, 503, 504) or (
+                exc.status_code is None and error_code in ("Timeout", "InternalServerError")
+            )
+            if not retryable:
+                raise
+            failure = f"HTTP {exc.status_code}, code {error_code}"
+            if attempt == AGENT_GET_ATTEMPTS:
+                print(
+                    f"  latest-version lookup failed after {AGENT_GET_ATTEMPTS} attempts ({failure}). "
+                    "Foundry is unavailable; keeping the cached agent unchanged. "
+                    "Retry terraform apply once the service recovers.",
+                    flush=True,
+                )
+                raise
+            delay = AGENT_GET_RETRY_DELAY * attempt
+            print(
+                f"  latest-version lookup failed ({failure}) - retry "
+                f"{attempt}/{AGENT_GET_ATTEMPTS - 1} in {delay:.0f}s",
+                flush=True,
+            )
+            time.sleep(delay)
 
 
 def smoke_invoke(project: AIProjectClient, version: str) -> str | None:

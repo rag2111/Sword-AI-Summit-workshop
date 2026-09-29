@@ -51,7 +51,7 @@ Application Insights + Log Analytics: one trace per request (agent → APIM → 
 | Terraform | **>= 1.9** (providers pinned: azurerm 5.7.0, azapi 2.13.0, random 3.9.1, local 2.9.1) |
 | Azure CLI | logged in (`az login`) as a user with **Owner** (or Contributor + User Access Administrator) on the subscription; ACR Tasks must be allowed (`az acr build`) |
 | uv | 0.12+ (runs the post-deploy scripts with their pinned inline dependencies; installs Python 3.12 itself) |
-| Quota | Regional TPM quota for the three deployments (defaults: gpt-6-luna 500K, gpt-6-sol 200K, text-embedding-3-large 150K, DataZoneStandard). Check with `az cognitiveservices usage list -l <region> -o table` |
+| Quota | Regional TPM quota for the three deployments (defaults: gpt-6-luna 500K, gpt-6-sol 200K, text-embedding-3-large 150K, GlobalStandard). Check with `az cognitiveservices usage list -l <region> -o table` |
 | Resource providers | registered automatically by the azurerm provider (see `versions.tf`) |
 
 ### Download and install
@@ -318,6 +318,7 @@ things that do not strictly go through APIM are in [`../docs/apim-exceptions/inf
 | `InsufficientQuota` / `DeploymentModelNotSupported` on a deployment | Lower `capacity`, change `sku` (e.g. `Standard`) or region; check `az cognitiveservices usage list`. |
 | `az acr build` fails (ACR Tasks not allowed in the subscription) | Build and push locally: `docker build -t <acr>.azurecr.io/care-tools-backend:<tag> apps/care_tools_backend && az acr login -n <acr> && docker push …`, then `terraform apply` again. |
 | Scripts print `HTTP 403 (RBAC propagating?)` | They retry for ~3 min; if it still fails wait a few minutes and run `terraform apply` again (idempotent). |
+| Base agent latest-version lookup returns `InternalServerError: Unable to get resource information` or `Timeout` | This is a Foundry data-plane failure, not a WSL error. Agent setup retries transient HTTP 408/429/500/502/503/504 responses and status-less `Timeout`/`InternalServerError` errors up to four attempts, waiting 5/10/15 seconds between attempts (in addition to SDK retries). If exhausted, it fails without replacing the agent or overwriting its cached output. Keep the Terraform state and re-run `terraform apply` after Foundry recovers; do not delete the agent or skip latest-version validation. |
 | Name conflict after destroy + apply | Soft-deleted resources: `az apim deletedservice purge -n <apim> -l <region>`; `az cognitiveservices account purge -n <foundry> -g <rg> -l <region>`. |
 | Token tiles in the workbook are empty | Enable custom metrics **with dimensions** on Application Insights (see Observability). |
 | `/a2a/care-knowledge` 401/403/404 | Check `out/base_agent.json` (`a2a_enabled`), APIM MI has *Foundry User* on the project; try `a2a_apim_api_kind = "http"`, else `a2a_mode = "adapter"`. |

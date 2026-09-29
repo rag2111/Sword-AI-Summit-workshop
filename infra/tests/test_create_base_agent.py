@@ -3,11 +3,11 @@
 import importlib.util
 import json
 from types import SimpleNamespace
-from unittest.mock import Mock
+from unittest.mock import Mock, call
 
 import pytest
 from azure.ai.projects.models import MCPTool
-from azure.core.exceptions import ResourceNotFoundError
+from azure.core.exceptions import HttpResponseError, ResourceNotFoundError
 
 from _helpers import INFRA
 
@@ -231,3 +231,127 @@ def test_latest_lookup_handles_missing_agent_but_propagates_other_errors():
     project.agents.get.side_effect = RuntimeError("access denied")
     with pytest.raises(RuntimeError, match="access denied"):
         agent.version_is_latest(project, "1")
+
+
+def test_latest_lookup_retries_foundry_timeout(monkeypatch):
+    project = Mock()
+    timeout = HttpResponseError("The operation was timeout.")
+    timeout.error = SimpleNamespace(code="Timeout")
+    project.agents.get.side_effect = [timeout, SimpleNamespace(
+        versions=SimpleNamespace(latest=SimpleNamespace(version="7"))
+    )]
+    sleep = Mock()
+    monkeypatch.setattr(agent.time, "sleep", sleep)
+
+    assert agent.version_is_latest(project, "7")
+    assert project.agents.get.call_count == 2
+    sleep.assert_called_once_with(agent.AGENT_GET_RETRY_DELAY)
+
+
+def test_latest_lookup_propagates_exhausted_foundry_timeout(monkeypatch):
+    project = Mock()
+    timeout = HttpResponseError("The operation was timeout.")
+    timeout.error = SimpleNamespace(code="Timeout")
+    project.agents.get.side_effect = timeout
+    sleep = Mock()
+    monkeypatch.setattr(agent.time, "sleep", sleep)
+
+    with pytest.raises(HttpResponseError, match="timeout"):
+        agent.version_is_latest(project, "7")
+    assert project.agents.get.call_count == agent.AGENT_GET_ATTEMPTS
+    assert sleep.call_count == agent.AGENT_GET_ATTEMPTS - 1
+
+
+@pytest.mark.parametrize("status,code", [
+    (500, "InternalServerError"),
+    (None, "InternalServerError"),
+    (500, None),
+    (408, None),
+    (429, None),
+    (502, None),
+    (503, None),
+    (504, None),
+])
+@pytest.mark.parametrize("latest_version,expected", [("7", True), ("8", False)])
+def test_latest_lookup_retries_transient_errors(monkeypatch, capsys, status, code, latest_version, expected):
+    project = Mock()
+    error = HttpResponseError("Unable to get resource information.")
+    error.status_code = status
+    error.error = SimpleNamespace(code=code)
+    project.agents.get.side_effect = [error, SimpleNamespace(
+        versions=SimpleNamespace(latest=SimpleNamespace(version=latest_version))
+    )]
+    sleep = Mock()
+    monkeypatch.setattr(agent.time, "sleep", sleep)
+
+    assert agent.version_is_latest(project, "7") is expected
+    assert project.agents.get.call_args_list == [call(agent_name=agent.AGENT_NAME)] * 2
+    sleep.assert_called_once_with(agent.AGENT_GET_RETRY_DELAY)
+    assert f"HTTP {status}, code {code}" in capsys.readouterr().out
+
+
+@pytest.mark.parametrize("status,code", [
+    (400, "BadRequest"),
+    (401, "Unauthorized"),
+    (403, "Forbidden"),
+    (403, "InternalServerError"),
+    (501, "NotImplemented"),
+    (None, "UnknownError"),
+])
+def test_latest_lookup_does_not_retry_permanent_errors(monkeypatch, status, code):
+    project = Mock()
+    error = HttpResponseError("permanent failure")
+    error.status_code = status
+    error.error = SimpleNamespace(code=code)
+    project.agents.get.side_effect = error
+    sleep = Mock()
+    monkeypatch.setattr(agent.time, "sleep", sleep)
+
+    with pytest.raises(HttpResponseError) as caught:
+        agent.version_is_latest(project, "7")
+    assert caught.value is error
+    project.agents.get.assert_called_once_with(agent_name=agent.AGENT_NAME)
+    sleep.assert_not_called()
+
+
+def test_cached_agent_is_reused_after_internal_server_error(setup, monkeypatch):
+    project, tool, smoke = setup
+    monkeypatch.setenv("MODEL_ROUTE", "direct")
+    save_previous(tool)
+    error = HttpResponseError("Unable to get resource information.")
+    error.status_code = 500
+    error.error = SimpleNamespace(code="InternalServerError")
+    project.agents.get.side_effect = [error, SimpleNamespace(
+        versions=SimpleNamespace(latest=SimpleNamespace(version="1"))
+    )]
+
+    agent.main()
+
+    project.agents.create_version.assert_not_called()
+    smoke.assert_called_once_with(project, "1")
+    assert read_result()["version"] == "1"
+
+
+def test_exhausted_internal_server_error_preserves_cached_agent(setup, monkeypatch, capsys):
+    project, tool, smoke = setup
+    monkeypatch.setenv("MODEL_ROUTE", "direct")
+    save_previous(tool)
+    previous = agent.OUT_FILE.read_bytes()
+    error = HttpResponseError("Unable to get resource information.")
+    error.status_code = 500
+    error.error = SimpleNamespace(code="InternalServerError")
+    project.agents.get.side_effect = error
+
+    with pytest.raises(HttpResponseError) as caught:
+        agent.main()
+
+    assert caught.value is error
+    assert project.agents.get.call_count == agent.AGENT_GET_ATTEMPTS
+    assert agent.time.sleep.call_args_list == [
+        call(agent.AGENT_GET_RETRY_DELAY * attempt)
+        for attempt in range(1, agent.AGENT_GET_ATTEMPTS)
+    ]
+    project.agents.create_version.assert_not_called()
+    smoke.assert_not_called()
+    assert agent.OUT_FILE.read_bytes() == previous
+    assert "Retry terraform apply once the service recovers." in capsys.readouterr().out

@@ -60,9 +60,9 @@ variable "model_deployments" {
     role     = string
   }))
   default = [
-    { name = "gpt-6-luna", model = "gpt-6-luna", version = "2026-09-22", sku = "DataZoneStandard", capacity = 200, role = "chat" },
-    { name = "gpt-6-sol", model = "gpt-6-sol", version = "2026-09-22", sku = "DataZoneStandard", capacity = 100, role = "judge" },
-    { name = "text-embedding-3-large", model = "text-embedding-3-large", version = "1", sku = "DataZoneStandard", capacity = 150, role = "embedding" },
+    { name = "gpt-6-luna", model = "gpt-6-luna", version = "2026-09-22", sku = "GlobalStandard", capacity = 200, role = "chat" },
+    { name = "gpt-6-sol", model = "gpt-6-sol", version = "2026-09-22", sku = "GlobalStandard", capacity = 100, role = "judge" },
+    { name = "text-embedding-3-large", model = "text-embedding-3-large", version = "1", sku = "GlobalStandard", capacity = 150, role = "embedding" },
   ]
 
   validation {
